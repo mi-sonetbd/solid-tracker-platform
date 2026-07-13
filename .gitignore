@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE and editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Test and temporary files
+tmp/
+temp/
+.cache/
+
+# Prisma and local databases
+*.db
+*.db-journal
+
+# Mobile build files
+apps/android-app/.gradle/
+apps/android-app/local.properties
+apps/android-app/**/build/
+
+# Generated application files
+services/backend-api/src/generated/
