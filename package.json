@@ -1,19 +1,32 @@
 {
-  "name": "solid-tracker-platform",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Solid Tracker GPS tracking platform monorepo",
-  "packageManager": "pnpm@11.12.0",
-  "engines": {
-    "node": ">=24.0.0",
-    "pnpm": ">=11.0.0"
-  },
-  "scripts": {
-    "infra:up": "docker compose --env-file .env up -d",
-    "infra:stop": "docker compose --env-file .env stop",
-    "infra:down": "docker compose --env-file .env down",
-    "infra:reset": "docker compose --env-file .env down --volumes --remove-orphans",
-    "infra:logs": "docker compose --env-file .env logs -f",
-    "infra:status": "docker compose --env-file .env ps"
-  }
+    "name":  "solid-tracker-platform",
+    "version":  "0.1.0",
+    "private":  true,
+    "description":  "Solid Tracker GPS tracking platform monorepo",
+    "packageManager":  "pnpm@11.12.0",
+    "engines":  {
+                    "node":  "\u003e=24.0.0",
+                    "pnpm":  "\u003e=11.0.0"
+                },
+    "scripts":  {
+                    "infra:up":  "docker compose --env-file .env up -d",
+                    "infra:stop":  "docker compose --env-file .env stop",
+                    "infra:down":  "docker compose --env-file .env down",
+                    "infra:reset":  "docker compose --env-file .env down --volumes --remove-orphans",
+                    "infra:logs":  "docker compose --env-file .env logs -f",
+                    "infra:status":  "docker compose --env-file .env ps",
+                    "api:build":  "pnpm --filter @solid-tracker/backend-api build",
+                    "api:start":  "pnpm --filter @solid-tracker/backend-api start",
+                    "api:start:dev":  "pnpm --filter @solid-tracker/backend-api start:dev",
+                    "api:start:prod":  "pnpm --filter @solid-tracker/backend-api start:prod",
+                    "api:format":  "pnpm --filter @solid-tracker/backend-api format",
+                    "api:lint":  "pnpm --filter @solid-tracker/backend-api lint",
+                    "api:lint:fix":  "pnpm --filter @solid-tracker/backend-api lint:fix",
+                    "api:typecheck":  "pnpm --filter @solid-tracker/backend-api typecheck",
+                    "api:test":  "pnpm --filter @solid-tracker/backend-api test",
+                    "api:test:e2e":  "pnpm --filter @solid-tracker/backend-api test:e2e"
+                },
+    "scarfSettings":  {
+                          "enabled":  false
+                      }
 }
