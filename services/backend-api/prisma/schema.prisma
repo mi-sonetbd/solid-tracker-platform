@@ -1904,3 +1904,95 @@ model OtpChallenge {
   @@index([userId, purpose, status])
   @@map("otp_challenges")
 }
+
+enum NotificationTemplateStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum NotificationDeliveryAttemptStatus {
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
+  DEAD_LETTER
+  CANCELLED
+}
+
+enum NotificationProviderEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+model NotificationTemplate {
+  id              String                     @id @default(uuid()) @db.Uuid
+  templateCode    String                     @unique @db.VarChar(80)
+  templateKey     String                     @db.VarChar(120)
+  channel         NotificationChannel
+  locale          String                     @default("en") @db.VarChar(20)
+  version         Int                        @default(1)
+  name            String                     @db.VarChar(160)
+  subjectTemplate String?                    @db.VarChar(240)
+  bodyTemplate    String
+  variableSchema  Json?
+  status          NotificationTemplateStatus @default(DRAFT)
+  createdByUserId String?                    @db.Uuid
+  activatedAt     DateTime?                  @db.Timestamptz(3)
+  archivedAt      DateTime?                  @db.Timestamptz(3)
+  createdAt       DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                   @updatedAt @db.Timestamptz(3)
+
+  @@unique([templateKey, channel, locale, version])
+  @@index([templateKey, channel, locale, status])
+  @@index([status, createdAt])
+  @@map("notification_templates")
+}
+
+model NotificationDeliveryAttempt {
+  id                String                            @id @default(uuid()) @db.Uuid
+  notificationId    String                            @db.Uuid
+  attemptNumber     Int
+  provider          String                            @db.VarChar(120)
+  idempotencyKey    String                            @unique @db.VarChar(180)
+  status            NotificationDeliveryAttemptStatus @default(PROCESSING)
+  requestPayload    Json?
+  responsePayload   Json?
+  providerMessageId String?                           @db.VarChar(200)
+  errorCode         String?                           @db.VarChar(100)
+  errorMessage      String?
+  nextRetryAt       DateTime?                         @db.Timestamptz(3)
+  startedAt         DateTime                          @default(now()) @db.Timestamptz(3)
+  completedAt       DateTime?                         @db.Timestamptz(3)
+  createdAt         DateTime                          @default(now()) @db.Timestamptz(3)
+
+  @@unique([notificationId, attemptNumber])
+  @@index([notificationId, createdAt])
+  @@index([status, nextRetryAt])
+  @@index([provider, providerMessageId])
+  @@map("notification_delivery_attempts")
+}
+
+model NotificationProviderEvent {
+  id                String                          @id @default(uuid()) @db.Uuid
+  provider          String                          @db.VarChar(120)
+  externalEventId   String                          @db.VarChar(180)
+  notificationId    String?                         @db.Uuid
+  providerMessageId String?                         @db.VarChar(200)
+  eventType         String                          @db.VarChar(100)
+  status            NotificationProviderEventStatus @default(RECEIVED)
+  signatureValid    Boolean                         @default(false)
+  payload           Json
+  receivedAt        DateTime                        @default(now()) @db.Timestamptz(3)
+  processedAt       DateTime?                       @db.Timestamptz(3)
+  error             String?
+
+  @@unique([provider, externalEventId])
+  @@index([notificationId, receivedAt])
+  @@index([providerMessageId])
+  @@index([status, receivedAt])
+  @@map("notification_provider_events")
+}

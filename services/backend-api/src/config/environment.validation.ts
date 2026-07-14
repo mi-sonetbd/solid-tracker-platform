@@ -44,4 +44,26 @@ export const environmentValidationSchema = Joi.object({
   SSLCOMMERZ_BASE_URL: Joi.string().allow('').default(''),
   SSLCOMMERZ_STORE_ID: Joi.string().allow('').default(''),
   SSLCOMMERZ_STORE_PASSWORD: Joi.string().allow('').default(''),
+  NOTIFICATION_DELIVERY_ENABLED: Joi.boolean().truthy('true').falsy('false').default(false),
+  NOTIFICATION_DELIVERY_INTERVAL_MS: Joi.number().integer().min(1000).max(3600000).default(5000),
+  NOTIFICATION_DELIVERY_BATCH_SIZE: Joi.number().integer().min(1).max(200).default(25),
+  NOTIFICATION_DELIVERY_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  NOTIFICATION_DELIVERY_RETRY_BASE_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .max(86400000)
+    .default(30000),
+  NOTIFICATION_PROVIDER_HTTP_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .max(120000)
+    .default(10000),
+  NOTIFICATION_CALLBACK_BASE_URL: Joi.string().uri().required(),
+  NOTIFICATION_SANDBOX_WEBHOOK_SECRET: Joi.string().min(32).required(),
+  NOTIFICATION_SMS_PROXY_URL: Joi.string().allow('').default(''),
+  NOTIFICATION_SMS_PROXY_SECRET: Joi.string().allow('').default(''),
+  NOTIFICATION_EMAIL_PROXY_URL: Joi.string().allow('').default(''),
+  NOTIFICATION_EMAIL_PROXY_SECRET: Joi.string().allow('').default(''),
+  NOTIFICATION_PUSH_PROXY_URL: Joi.string().allow('').default(''),
+  NOTIFICATION_PUSH_PROXY_SECRET: Joi.string().allow('').default(''),
 });
