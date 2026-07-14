@@ -46,6 +46,9 @@ const permissionDefinitions = [
   ['settlement.create', 'Create settlements'],
   ['command.send', 'Send device commands'],
   ['command.engine_cutoff', 'Send engine-cutoff commands'],
+  ['notification.template.manage', 'Manage notification templates'],
+  ['notification.delivery.manage', 'Manage notification delivery'],
+  ['notification.delivery.view', 'View notification delivery'],
 ] as const;
 
 const roleDefinitions = [
@@ -80,6 +83,7 @@ const rolePermissionCodes: Record<string, readonly string[]> = {
     'subscription.view',
     'invoice.view',
     'command.send',
+    'notification.delivery.view',
   ],
   PLATFORM_FINANCE: [
     'dealer.view',
