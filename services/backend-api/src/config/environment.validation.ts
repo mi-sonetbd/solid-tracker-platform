@@ -27,4 +27,7 @@ export const environmentValidationSchema = Joi.object({
   AUTH_OTP_TTL_SECONDS: Joi.number().integer().min(60).default(300),
   AUTH_OTP_MAX_ATTEMPTS: Joi.number().integer().min(3).max(20).default(5),
   BILLING_PAYOUT_ENCRYPTION_KEY: Joi.string().min(32).required(),
+  TRACKING_CREDENTIAL_ENCRYPTION_KEY: Joi.string().min(32).required(),
+  TRACKING_WEBHOOK_SECRET: Joi.string().min(32).required(),
+  TRACKING_HTTP_TIMEOUT_MS: Joi.number().integer().min(1000).default(10000),
 });
