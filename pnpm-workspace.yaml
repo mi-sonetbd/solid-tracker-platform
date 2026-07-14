@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - services/*
+  - packages/*
+allowBuilds:
+  '@scarf/scarf': false
+  unrs-resolver: set this to true or false
