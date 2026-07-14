@@ -47,5 +47,14 @@ import { SubscriptionsService } from './subscriptions/subscriptions.service';
     PayoutAccountsService,
     SettlementsService,
   ],
+  exports: [
+    BillingAccessService,
+    BillingCodeService,
+    BillingDateService,
+    BillingMoneyService,
+    CommissionEngineService,
+    InvoicesService,
+    PaymentsService,
+  ],
 })
 export class BillingApiModule {}

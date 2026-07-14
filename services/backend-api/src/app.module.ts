@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PaymentGatewayAutomationModule } from './payment-automation/payment-gateway-automation.module';
 import { TrackingApiModule } from './tracking/tracking-api.module';
 import { BillingApiModule } from './billing/billing-api.module';
 import { AssetManagementModule } from './assets/asset-management.module';
@@ -14,6 +15,7 @@ import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
+    PaymentGatewayAutomationModule,
     TrackingApiModule,
     BillingApiModule,
     AssetManagementModule,
