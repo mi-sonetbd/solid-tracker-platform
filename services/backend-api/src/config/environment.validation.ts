@@ -26,4 +26,5 @@ export const environmentValidationSchema = Joi.object({
   AUTH_LOGIN_MOBILE_WINDOW_SECONDS: Joi.number().integer().min(1).default(300),
   AUTH_OTP_TTL_SECONDS: Joi.number().integer().min(60).default(300),
   AUTH_OTP_MAX_ATTEMPTS: Joi.number().integer().min(3).max(20).default(5),
+  BILLING_PAYOUT_ENCRYPTION_KEY: Joi.string().min(32).required(),
 });
