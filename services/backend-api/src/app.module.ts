@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TrackingApiModule } from './tracking/tracking-api.module';
 import { BillingApiModule } from './billing/billing-api.module';
 import { AssetManagementModule } from './assets/asset-management.module';
 import { ConfigModule } from '@nestjs/config';
@@ -13,6 +14,7 @@ import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
+    TrackingApiModule,
     BillingApiModule,
     AssetManagementModule,
     ConfigModule.forRoot({
