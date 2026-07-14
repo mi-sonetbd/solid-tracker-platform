@@ -1,0 +1,37 @@
+flowchart TB
+    PLATFORM[Solid Tracker Platform]
+    ZONE[Zone]
+    DEALER[Dealer Organization]
+    GROUP[Customer Group]
+    CUSTOMER[Customer]
+    VEHICLE[Vehicle]
+    DEVICE[GPS Device]
+    SUBSCRIPTION[Subscription]
+    INVOICE[Invoice]
+    PAYMENT[Payment]
+    COMMISSION[Commission Entry]
+    SETTLEMENT[Dealer Settlement]
+    TRACCAR[Traccar]
+    USER[User]
+    ROLE[Role Assignment]
+
+    PLATFORM --> ZONE
+    ZONE --> DEALER
+    DEALER --> GROUP
+    DEALER --> CUSTOMER
+    GROUP --> CUSTOMER
+    CUSTOMER --> VEHICLE
+    VEHICLE --> SUBSCRIPTION
+    VEHICLE --> DEVICE
+    SUBSCRIPTION --> INVOICE
+    PAYMENT --> INVOICE
+    PAYMENT --> COMMISSION
+    COMMISSION --> SETTLEMENT
+    DEVICE --> TRACCAR
+    USER --> ROLE
+    ROLE --> PLATFORM
+    ROLE --> ZONE
+    ROLE --> DEALER
+    ROLE --> GROUP
+    ROLE --> CUSTOMER
+    ROLE --> VEHICLE

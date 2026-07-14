@@ -5,6 +5,9 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
+    ignores: ['src/generated/prisma/**'],
+  },
+  {
     ignores: ['dist/**', 'coverage/**'],
   },
   eslint.configs.recommended,

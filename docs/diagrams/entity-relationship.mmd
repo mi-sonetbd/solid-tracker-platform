@@ -1,0 +1,62 @@
+erDiagram
+    ORGANIZATION ||--o{ ORGANIZATION_MEMBERSHIP : has
+    USER ||--o{ ORGANIZATION_MEMBERSHIP : joins
+    USER ||--o{ ROLE_ASSIGNMENT : receives
+    ROLE ||--o{ ROLE_ASSIGNMENT : assigned
+    ROLE ||--o{ ROLE_PERMISSION : contains
+    PERMISSION ||--o{ ROLE_PERMISSION : included
+
+    ORGANIZATION ||--o| DEALER_PROFILE : may_have
+    ORGANIZATION ||--o{ CUSTOMER_GROUP : owns
+    CUSTOMER_GROUP ||--o{ CUSTOMER : groups
+    ORGANIZATION ||--o{ CUSTOMER : manages
+
+    CUSTOMER ||--o| INDIVIDUAL_CUSTOMER_PROFILE : profile
+    CUSTOMER ||--o| ORGANIZATION_CUSTOMER_PROFILE : profile
+    CUSTOMER ||--o{ CUSTOMER_MEMBERSHIP : has
+    USER ||--o{ CUSTOMER_MEMBERSHIP : joins
+    CUSTOMER ||--o{ CUSTOMER_DEALER_ASSIGNMENT : history
+
+    CUSTOMER ||--o{ VEHICLE : owns
+    DEVICE_MODEL ||--o{ DEVICE : classifies
+    DEVICE ||--o{ DEVICE_OWNERSHIP_HISTORY : ownership
+    DEVICE ||--o{ DEVICE_CUSTODY_HISTORY : custody
+    ORGANIZATION ||--o{ DEALER_DEVICE_ALLOCATION : receives
+    DEVICE ||--o{ DEALER_DEVICE_ALLOCATION : allocated
+
+    VEHICLE ||--o{ DEVICE_INSTALLATION : receives
+    DEVICE ||--o{ DEVICE_INSTALLATION : installed
+    VEHICLE ||--o{ VEHICLE_DEVICE_ASSIGNMENT : has
+    DEVICE ||--o{ VEHICLE_DEVICE_ASSIGNMENT : assigned
+
+    SERVICE_PLAN ||--o{ SUBSCRIPTION : defines
+    CUSTOMER ||--o{ SUBSCRIPTION : owns
+    VEHICLE ||--o{ SUBSCRIPTION : covered
+    SUBSCRIPTION ||--o{ INVOICE : bills
+    INVOICE ||--|{ INVOICE_LINE : contains
+
+    CUSTOMER ||--o{ PAYMENT : makes
+    PAYMENT ||--o{ PAYMENT_ALLOCATION : allocates
+    INVOICE ||--o{ PAYMENT_ALLOCATION : receives
+    PAYMENT ||--o{ PAYMENT_GATEWAY_EVENT : confirmed_by
+
+    COMMISSION_RULE ||--o{ COMMISSION_ENTRY : calculates
+    ORGANIZATION ||--o{ COMMISSION_ENTRY : earns
+    PAYMENT ||--o{ COMMISSION_ENTRY : triggers
+    DEALER_SETTLEMENT ||--|{ DEALER_SETTLEMENT_ITEM : contains
+    COMMISSION_ENTRY ||--o| DEALER_SETTLEMENT_ITEM : settled_by
+    ORGANIZATION ||--o{ DEALER_SETTLEMENT : receives
+
+    TRACCAR_SERVER ||--o{ TRACCAR_DEVICE_MAPPING : hosts
+    DEVICE ||--o{ TRACCAR_DEVICE_MAPPING : maps
+    VEHICLE ||--o{ TRACKING_EVENT : generates
+    DEVICE ||--o{ TRACKING_EVENT : reports
+
+    CUSTOMER ||--o{ GEOFENCE : owns
+    GEOFENCE ||--o{ VEHICLE_GEOFENCE_ASSIGNMENT : applies
+    VEHICLE ||--o{ VEHICLE_GEOFENCE_ASSIGNMENT : monitored
+
+    CUSTOMER ||--o{ NOTIFICATION_RULE : configures
+    TRACKING_EVENT ||--o{ NOTIFICATION : triggers
+    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ AUDIT_LOG : acts

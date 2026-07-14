@@ -24,7 +24,14 @@
                     "api:lint:fix":  "pnpm --filter @solid-tracker/backend-api lint:fix",
                     "api:typecheck":  "pnpm --filter @solid-tracker/backend-api typecheck",
                     "api:test":  "pnpm --filter @solid-tracker/backend-api test",
-                    "api:test:e2e":  "pnpm --filter @solid-tracker/backend-api test:e2e"
+                    "api:test:e2e":  "pnpm --filter @solid-tracker/backend-api test:e2e",
+                    "db:format":  "pnpm --filter @solid-tracker/backend-api prisma:format",
+                    "db:validate":  "pnpm --filter @solid-tracker/backend-api prisma:validate",
+                    "db:generate":  "pnpm --filter @solid-tracker/backend-api prisma:generate",
+                    "db:migrate:dev":  "pnpm --filter @solid-tracker/backend-api prisma:migrate:dev",
+                    "db:migrate:status":  "pnpm --filter @solid-tracker/backend-api prisma:migrate:status",
+                    "db:seed":  "pnpm --filter @solid-tracker/backend-api prisma:seed",
+                    "db:studio":  "pnpm --filter @solid-tracker/backend-api prisma:studio"
                 },
     "scarfSettings":  {
                           "enabled":  false
