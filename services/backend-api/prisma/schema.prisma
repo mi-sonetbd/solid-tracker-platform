@@ -209,28 +209,35 @@ model User {
   updatedAt              DateTime   @updatedAt @db.Timestamptz(3)
   archivedAt             DateTime?  @db.Timestamptz(3)
 
-  organizationMemberships   OrganizationMembership[]   @relation("OrganizationMember")
-  invitedMemberships        OrganizationMembership[]   @relation("OrganizationMembershipInviter")
-  roleAssignments           RoleAssignment[]           @relation("RoleAssignmentUser")
-  assignedRoles             RoleAssignment[]           @relation("RoleAssignmentAssigner")
-  revokedRoles              RoleAssignment[]           @relation("RoleAssignmentRevoker")
-  sessions                  UserSession[]
-  customerMemberships       CustomerMembership[]       @relation("CustomerMember")
-  invitedCustomerMembers    CustomerMembership[]       @relation("CustomerMembershipInviter")
-  createdCustomerGroups     CustomerGroup[]            @relation("CustomerGroupCreator")
-  createdCustomers          Customer[]                 @relation("CustomerCreator")
-  assignedCustomers         CustomerDealerAssignment[] @relation("CustomerDealerAssigner")
-  actorAuditLogs            AuditLog[]                 @relation("AuditActorUser")
-  createdVehicles           Vehicle[]                  @relation("VehicleCreator")
-  changedDeviceOwnerships   DeviceOwnershipHistory[]   @relation("DeviceOwnershipChanger")
-  custodiedDeviceHistory    DeviceCustodyHistory[]     @relation("DeviceCustodianUser")
-  changedDeviceCustodies    DeviceCustodyHistory[]     @relation("DeviceCustodyChanger")
-  allocatedDevices          DealerDeviceAllocation[]   @relation("DeviceAllocationAllocator")
-  returnedDeviceAllocations DealerDeviceAllocation[]   @relation("DeviceAllocationReturner")
-  installedDevices          DeviceInstallation[]       @relation("InstallationInstaller")
-  verifiedInstallations     DeviceInstallation[]       @relation("InstallationVerifier")
-  assignedDeviceRelations   VehicleDeviceAssignment[]  @relation("DeviceAssignmentAssigner")
-  endedDeviceRelations      VehicleDeviceAssignment[]  @relation("DeviceAssignmentEnder")
+  organizationMemberships    OrganizationMembership[]   @relation("OrganizationMember")
+  invitedMemberships         OrganizationMembership[]   @relation("OrganizationMembershipInviter")
+  roleAssignments            RoleAssignment[]           @relation("RoleAssignmentUser")
+  assignedRoles              RoleAssignment[]           @relation("RoleAssignmentAssigner")
+  revokedRoles               RoleAssignment[]           @relation("RoleAssignmentRevoker")
+  sessions                   UserSession[]
+  customerMemberships        CustomerMembership[]       @relation("CustomerMember")
+  invitedCustomerMembers     CustomerMembership[]       @relation("CustomerMembershipInviter")
+  createdCustomerGroups      CustomerGroup[]            @relation("CustomerGroupCreator")
+  createdCustomers           Customer[]                 @relation("CustomerCreator")
+  assignedCustomers          CustomerDealerAssignment[] @relation("CustomerDealerAssigner")
+  actorAuditLogs             AuditLog[]                 @relation("AuditActorUser")
+  createdVehicles            Vehicle[]                  @relation("VehicleCreator")
+  changedDeviceOwnerships    DeviceOwnershipHistory[]   @relation("DeviceOwnershipChanger")
+  custodiedDeviceHistory     DeviceCustodyHistory[]     @relation("DeviceCustodianUser")
+  changedDeviceCustodies     DeviceCustodyHistory[]     @relation("DeviceCustodyChanger")
+  allocatedDevices           DealerDeviceAllocation[]   @relation("DeviceAllocationAllocator")
+  returnedDeviceAllocations  DealerDeviceAllocation[]   @relation("DeviceAllocationReturner")
+  installedDevices           DeviceInstallation[]       @relation("InstallationInstaller")
+  verifiedInstallations      DeviceInstallation[]       @relation("InstallationVerifier")
+  assignedDeviceRelations    VehicleDeviceAssignment[]  @relation("DeviceAssignmentAssigner")
+  endedDeviceRelations       VehicleDeviceAssignment[]  @relation("DeviceAssignmentEnder")
+  acknowledgedTrackingEvents TrackingEvent[]            @relation("TrackingEventAcknowledger")
+  createdGeofences           Geofence[]                 @relation("GeofenceCreator")
+  createdNotificationRules   NotificationRule[]         @relation("NotificationRuleCreator")
+  notificationRuleRecipients NotificationRule[]         @relation("NotificationRuleRecipientUser")
+  notifications              Notification[]             @relation("NotificationRecipientUser")
+  requestedDeviceCommands    DeviceCommandRequest[]     @relation("DeviceCommandRequester")
+  approvedDeviceCommands     DeviceCommandRequest[]     @relation("DeviceCommandApprover")
 
   @@index([status])
   @@map("users")
@@ -411,6 +418,10 @@ model Customer {
   payments               Payment[]
   refunds                Refund[]
   commissionEntries      CommissionEntry[]
+  trackingEvents         TrackingEvent[]
+  geofences              Geofence[]
+  notificationRules      NotificationRule[]
+  notifications          Notification[]
 
   @@index([managingDealerId, status])
   @@index([customerGroupId])
@@ -677,11 +688,15 @@ model Vehicle {
   updatedAt                    DateTime      @updatedAt @db.Timestamptz(3)
   archivedAt                   DateTime?     @db.Timestamptz(3)
 
-  customer          Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  createdBy         User?                     @relation("VehicleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  installations     DeviceInstallation[]
-  deviceAssignments VehicleDeviceAssignment[]
-  subscriptions     Subscription[]
+  customer                   Customer                    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy                  User?                       @relation("VehicleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  installations              DeviceInstallation[]
+  deviceAssignments          VehicleDeviceAssignment[]
+  subscriptions              Subscription[]
+  trackingEvents             TrackingEvent[]
+  vehicleGeofenceAssignments VehicleGeofenceAssignment[]
+  notificationRules          NotificationRule[]
+  deviceCommandRequests      DeviceCommandRequest[]
 
   @@index([customerId, status])
   @@index([vehicleType, status])
@@ -727,6 +742,9 @@ model Device {
   dealerAllocations  DealerDeviceAllocation[]
   installations      DeviceInstallation[]
   vehicleAssignments VehicleDeviceAssignment[]
+  traccarMappings    TraccarDeviceMapping[]
+  trackingEvents     TrackingEvent[]
+  commandRequests    DeviceCommandRequest[]
 
   @@index([deviceModelId, lifecycleStatus])
   @@index([lifecycleStatus])
@@ -1434,4 +1452,414 @@ model DealerLedgerEntry {
   @@index([dealerOrganizationId, occurredAt])
   @@index([referenceType, referenceId])
   @@map("dealer_ledger_entries")
+}
+
+enum TraccarServerStatus {
+  ACTIVE
+  INACTIVE
+  DEGRADED
+  MAINTENANCE
+  ARCHIVED
+}
+
+enum TraccarHealthStatus {
+  UNKNOWN
+  UP
+  DEGRADED
+  DOWN
+}
+
+enum TraccarSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  DISABLED
+  DELETED_EXTERNALLY
+}
+
+enum TrackingEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum TrackingEventProcessingStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum GeofenceGeometryType {
+  CIRCLE
+  POLYGON
+  POLYLINE
+}
+
+enum GeofenceStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum GeofenceAssignmentStatus {
+  ACTIVE
+  INACTIVE
+  ENDED
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+  WHATSAPP
+  VOICE_CALL
+}
+
+enum NotificationRecipientType {
+  USER
+  CUSTOMER_OWNER
+  CUSTOMER_ADMIN
+  CUSTOM_ADDRESS
+}
+
+enum NotificationStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum DeviceCommandType {
+  REQUEST_POSITION
+  RESTART_DEVICE
+  SET_REPORTING_INTERVAL
+  ACTIVATE_RELAY
+  DEACTIVATE_RELAY
+  ENGINE_CUTOFF
+  ENGINE_RESTORE
+  CHANGE_SERVER
+  CUSTOM
+}
+
+enum DeviceCommandStatus {
+  PENDING_APPROVAL
+  QUEUED
+  SENT
+  ACKNOWLEDGED
+  COMPLETED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum IntegrationJobType {
+  CREATE_DEVICE
+  UPDATE_DEVICE
+  DISABLE_DEVICE
+  SYNC_DEVICE
+  FETCH_LATEST_POSITION
+  PROCESS_EVENT
+  SYNC_GEOFENCE
+  SEND_COMMAND
+  RETRY_FAILED_SYNC
+}
+
+enum IntegrationJobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  DEAD_LETTER
+}
+
+model TraccarServer {
+  id                           String              @id @default(uuid()) @db.Uuid
+  serverCode                   String              @unique @db.VarChar(60)
+  name                         String              @db.VarChar(160)
+  baseUrl                      String              @unique @db.VarChar(500)
+  apiUsernameReference         String?             @db.VarChar(160)
+  encryptedCredentialReference String
+  status                       TraccarServerStatus @default(ACTIVE)
+  isDefault                    Boolean             @default(false)
+  lastHealthCheckAt            DateTime?           @db.Timestamptz(3)
+  lastHealthStatus             TraccarHealthStatus @default(UNKNOWN)
+  lastHealthError              String?
+  createdAt                    DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime            @updatedAt @db.Timestamptz(3)
+  archivedAt                   DateTime?           @db.Timestamptz(3)
+
+  deviceMappings  TraccarDeviceMapping[]
+  trackingEvents  TrackingEvent[]
+  geofences       Geofence[]
+  commandRequests DeviceCommandRequest[]
+  integrationJobs IntegrationJob[]
+
+  @@index([status])
+  @@map("traccar_servers")
+}
+
+model TraccarDeviceMapping {
+  id                String            @id @default(uuid()) @db.Uuid
+  deviceId          String            @db.Uuid
+  traccarServerId   String            @db.Uuid
+  traccarDeviceId   BigInt
+  traccarUniqueId   String            @db.VarChar(160)
+  syncStatus        TraccarSyncStatus @default(PENDING)
+  isPrimary         Boolean           @default(true)
+  isActive          Boolean           @default(true)
+  lastSyncAttemptAt DateTime?         @db.Timestamptz(3)
+  lastSyncedAt      DateTime?         @db.Timestamptz(3)
+  lastSyncError     String?
+  disabledAt        DateTime?         @db.Timestamptz(3)
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+
+  device        Device        @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  traccarServer TraccarServer @relation(fields: [traccarServerId], references: [id], onDelete: Restrict)
+
+  @@unique([deviceId, traccarServerId])
+  @@unique([traccarServerId, traccarDeviceId])
+  @@unique([traccarServerId, traccarUniqueId])
+  @@index([syncStatus, isActive])
+  @@map("traccar_device_mappings")
+}
+
+model TrackingEvent {
+  id                   String                        @id @default(uuid()) @db.Uuid
+  eventCode            String                        @unique @db.VarChar(70)
+  customerId           String                        @db.Uuid
+  vehicleId            String                        @db.Uuid
+  deviceId             String                        @db.Uuid
+  traccarServerId      String?                       @db.Uuid
+  traccarEventId       BigInt?
+  deduplicationKey     String                        @unique @db.VarChar(160)
+  eventType            String                        @db.VarChar(100)
+  severity             TrackingEventSeverity         @default(INFO)
+  latitude             Decimal?                      @db.Decimal(10, 7)
+  longitude            Decimal?                      @db.Decimal(10, 7)
+  occurredAt           DateTime                      @db.Timestamptz(3)
+  receivedAt           DateTime                      @default(now()) @db.Timestamptz(3)
+  attributes           Json?
+  processingStatus     TrackingEventProcessingStatus @default(RECEIVED)
+  processingError      String?
+  acknowledgedAt       DateTime?                     @db.Timestamptz(3)
+  acknowledgedByUserId String?                       @db.Uuid
+  createdAt            DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                      @updatedAt @db.Timestamptz(3)
+
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle        Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  device         Device         @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  traccarServer  TraccarServer? @relation(fields: [traccarServerId], references: [id], onDelete: Restrict)
+  acknowledgedBy User?          @relation("TrackingEventAcknowledger", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  notifications  Notification[]
+
+  @@unique([traccarServerId, traccarEventId])
+  @@index([customerId, occurredAt])
+  @@index([vehicleId, occurredAt])
+  @@index([deviceId, occurredAt])
+  @@index([eventType, severity, occurredAt])
+  @@index([processingStatus, receivedAt])
+  @@map("tracking_events")
+}
+
+model Geofence {
+  id                String               @id @default(uuid()) @db.Uuid
+  geofenceCode      String               @unique @db.VarChar(60)
+  customerId        String               @db.Uuid
+  name              String               @db.VarChar(160)
+  normalizedName    String               @db.VarChar(160)
+  description       String?
+  geometryType      GeofenceGeometryType
+  geometryData      Json
+  status            GeofenceStatus       @default(DRAFT)
+  traccarServerId   String?              @db.Uuid
+  traccarGeofenceId BigInt?
+  syncStatus        TraccarSyncStatus    @default(PENDING)
+  lastSyncAttemptAt DateTime?            @db.Timestamptz(3)
+  lastSyncedAt      DateTime?            @db.Timestamptz(3)
+  lastSyncError     String?
+  createdByUserId   String?              @db.Uuid
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
+  archivedAt        DateTime?            @db.Timestamptz(3)
+
+  customer      Customer                    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  traccarServer TraccarServer?              @relation(fields: [traccarServerId], references: [id], onDelete: Restrict)
+  createdBy     User?                       @relation("GeofenceCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignments   VehicleGeofenceAssignment[]
+
+  @@unique([customerId, normalizedName])
+  @@unique([traccarServerId, traccarGeofenceId])
+  @@index([customerId, status])
+  @@index([syncStatus])
+  @@map("geofences")
+}
+
+model VehicleGeofenceAssignment {
+  id           String                   @id @default(uuid()) @db.Uuid
+  geofenceId   String                   @db.Uuid
+  vehicleId    String                   @db.Uuid
+  monitorEntry Boolean                  @default(true)
+  monitorExit  Boolean                  @default(true)
+  activeFrom   DateTime                 @default(now()) @db.Timestamptz(3)
+  activeUntil  DateTime?                @db.Timestamptz(3)
+  status       GeofenceAssignmentStatus @default(ACTIVE)
+  createdAt    DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime                 @updatedAt @db.Timestamptz(3)
+
+  geofence Geofence @relation(fields: [geofenceId], references: [id], onDelete: Restrict)
+  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+
+  @@index([geofenceId, status])
+  @@index([vehicleId, status])
+  @@map("vehicle_geofence_assignments")
+}
+
+model NotificationRule {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  ruleCode              String                    @unique @db.VarChar(60)
+  customerId            String                    @db.Uuid
+  vehicleId             String?                   @db.Uuid
+  eventType             String                    @db.VarChar(100)
+  minimumSeverity       TrackingEventSeverity     @default(INFO)
+  channel               NotificationChannel
+  recipientType         NotificationRecipientType
+  recipientUserId       String?                   @db.Uuid
+  recipientAddress      String?                   @db.VarChar(320)
+  enabled               Boolean                   @default(true)
+  quietHoursStartMinute Int?
+  quietHoursEndMinute   Int?
+  cooldownSeconds       Int                       @default(0)
+  dailyLimit            Int?
+  createdByUserId       String?                   @db.Uuid
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                  @updatedAt @db.Timestamptz(3)
+  archivedAt            DateTime?                 @db.Timestamptz(3)
+
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle       Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  recipientUser User?          @relation("NotificationRuleRecipientUser", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  createdBy     User?          @relation("NotificationRuleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notifications Notification[]
+
+  @@index([customerId, enabled])
+  @@index([vehicleId, enabled])
+  @@index([eventType, minimumSeverity, enabled])
+  @@map("notification_rules")
+}
+
+model Notification {
+  id                 String              @id @default(uuid()) @db.Uuid
+  notificationCode   String              @unique @db.VarChar(70)
+  customerId         String              @db.Uuid
+  userId             String?             @db.Uuid
+  trackingEventId    String?             @db.Uuid
+  notificationRuleId String?             @db.Uuid
+  channel            NotificationChannel
+  recipient          String              @db.VarChar(320)
+  subject            String?             @db.VarChar(240)
+  renderedContent    String
+  status             NotificationStatus  @default(QUEUED)
+  provider           String?             @db.VarChar(120)
+  providerMessageId  String?             @db.VarChar(200)
+  queuedAt           DateTime            @default(now()) @db.Timestamptz(3)
+  processingAt       DateTime?           @db.Timestamptz(3)
+  sentAt             DateTime?           @db.Timestamptz(3)
+  deliveredAt        DateTime?           @db.Timestamptz(3)
+  failedAt           DateTime?           @db.Timestamptz(3)
+  failureReason      String?
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user             User?             @relation("NotificationRecipientUser", fields: [userId], references: [id], onDelete: SetNull)
+  trackingEvent    TrackingEvent?    @relation(fields: [trackingEventId], references: [id], onDelete: Restrict)
+  notificationRule NotificationRule? @relation(fields: [notificationRuleId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerMessageId])
+  @@index([customerId, status])
+  @@index([userId, status])
+  @@index([trackingEventId])
+  @@index([status, queuedAt])
+  @@map("notifications")
+}
+
+model DeviceCommandRequest {
+  id                String              @id @default(uuid()) @db.Uuid
+  commandCode       String              @unique @db.VarChar(70)
+  deviceId          String              @db.Uuid
+  vehicleId         String?             @db.Uuid
+  traccarServerId   String?             @db.Uuid
+  requestedByUserId String              @db.Uuid
+  approvedByUserId  String?             @db.Uuid
+  commandType       DeviceCommandType
+  parameters        Json?
+  reason            String
+  status            DeviceCommandStatus @default(QUEUED)
+  requiresApproval  Boolean             @default(false)
+  approvedAt        DateTime?           @db.Timestamptz(3)
+  traccarCommandId  BigInt?
+  requestedAt       DateTime            @default(now()) @db.Timestamptz(3)
+  sentAt            DateTime?           @db.Timestamptz(3)
+  acknowledgedAt    DateTime?           @db.Timestamptz(3)
+  completedAt       DateTime?           @db.Timestamptz(3)
+  failedAt          DateTime?           @db.Timestamptz(3)
+  failureReason     String?
+  expiresAt         DateTime?           @db.Timestamptz(3)
+  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime            @updatedAt @db.Timestamptz(3)
+
+  device        Device         @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  vehicle       Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  traccarServer TraccarServer? @relation(fields: [traccarServerId], references: [id], onDelete: Restrict)
+  requestedBy   User           @relation("DeviceCommandRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  approvedBy    User?          @relation("DeviceCommandApprover", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([traccarServerId, traccarCommandId])
+  @@index([deviceId, status])
+  @@index([vehicleId, status])
+  @@index([requestedByUserId, requestedAt])
+  @@index([status, expiresAt])
+  @@map("device_command_requests")
+}
+
+model IntegrationJob {
+  id              String               @id @default(uuid()) @db.Uuid
+  jobCode         String               @unique @db.VarChar(70)
+  idempotencyKey  String?              @unique @db.VarChar(180)
+  jobType         IntegrationJobType
+  traccarServerId String?              @db.Uuid
+  entityType      String               @db.VarChar(100)
+  entityId        String               @db.VarChar(100)
+  status          IntegrationJobStatus @default(PENDING)
+  priority        Int                  @default(100)
+  attemptCount    Int                  @default(0)
+  maximumAttempts Int                  @default(5)
+  nextAttemptAt   DateTime?            @db.Timestamptz(3)
+  lockedAt        DateTime?            @db.Timestamptz(3)
+  startedAt       DateTime?            @db.Timestamptz(3)
+  completedAt     DateTime?            @db.Timestamptz(3)
+  failedAt        DateTime?            @db.Timestamptz(3)
+  lastError       String?
+  payload         Json?
+  result          Json?
+  correlationId   String?              @db.VarChar(100)
+  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @db.Timestamptz(3)
+
+  traccarServer TraccarServer? @relation(fields: [traccarServerId], references: [id], onDelete: Restrict)
+
+  @@index([status, priority, nextAttemptAt])
+  @@index([traccarServerId, status])
+  @@index([entityType, entityId])
+  @@index([correlationId])
+  @@map("integration_jobs")
 }
