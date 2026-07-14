@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BillingApiModule } from './billing/billing-api.module';
 import { AssetManagementModule } from './assets/asset-management.module';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -12,6 +13,7 @@ import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
+    BillingApiModule,
     AssetManagementModule,
     ConfigModule.forRoot({
       isGlobal: true,
