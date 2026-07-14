@@ -20,6 +20,29 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  async incrementWithExpiry(key: string, ttlSeconds: number): Promise<number> {
+    await this.ensureConnected();
+
+    const result = await this.client.eval(
+      `
+        local count = redis.call('INCR', KEYS[1])
+        if count == 1 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+        end
+        return count
+      `,
+      1,
+      key,
+      ttlSeconds,
+    );
+
+    return Number(result);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.ensureConnected();
+    await this.client.del(key);
+  }
   async ping(): Promise<void> {
     await this.ensureConnected();
     const response = await this.client.ping();

@@ -238,6 +238,7 @@ model User {
   notifications              Notification[]             @relation("NotificationRecipientUser")
   requestedDeviceCommands    DeviceCommandRequest[]     @relation("DeviceCommandRequester")
   approvedDeviceCommands     DeviceCommandRequest[]     @relation("DeviceCommandApprover")
+  otpChallenges              OtpChallenge[]
 
   @@index([status])
   @@map("users")
@@ -1862,4 +1863,44 @@ model IntegrationJob {
   @@index([entityType, entityId])
   @@index([correlationId])
   @@map("integration_jobs")
+}
+
+enum OtpPurpose {
+  MOBILE_VERIFICATION
+  PASSWORD_RESET
+  HIGH_RISK_ACTION
+}
+
+enum OtpChallengeStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  CANCELLED
+  LOCKED
+}
+
+model OtpChallenge {
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String?            @db.Uuid
+  normalizedMobileNumber String             @db.VarChar(30)
+  purpose                OtpPurpose
+  codeHash               String
+  status                 OtpChallengeStatus @default(PENDING)
+  attemptCount           Int                @default(0)
+  maxAttempts            Int                @default(5)
+  resendCount            Int                @default(0)
+  expiresAt              DateTime           @db.Timestamptz(3)
+  verifiedAt             DateTime?          @db.Timestamptz(3)
+  invalidatedAt          DateTime?          @db.Timestamptz(3)
+  requestIp              String?            @db.VarChar(45)
+  requestUserAgent       String?
+  createdAt              DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime           @updatedAt @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([normalizedMobileNumber, purpose, status])
+  @@index([expiresAt, status])
+  @@index([userId, purpose, status])
+  @@map("otp_challenges")
 }
