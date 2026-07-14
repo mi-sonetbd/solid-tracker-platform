@@ -150,13 +150,17 @@ model Organization {
   updatedAt  DateTime           @updatedAt @db.Timestamptz(3)
   archivedAt DateTime?          @db.Timestamptz(3)
 
-  zone              Zone?                      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
-  dealerProfile     DealerProfile?
-  memberships       OrganizationMembership[]
-  customerGroups    CustomerGroup[]
-  managedCustomers  Customer[]                 @relation("ManagingDealer")
-  dealerAssignments CustomerDealerAssignment[]
-  actorAuditLogs    AuditLog[]                 @relation("AuditActorOrganization")
+  zone                    Zone?                      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  dealerProfile           DealerProfile?
+  memberships             OrganizationMembership[]
+  customerGroups          CustomerGroup[]
+  managedCustomers        Customer[]                 @relation("ManagingDealer")
+  dealerAssignments       CustomerDealerAssignment[]
+  actorAuditLogs          AuditLog[]                 @relation("AuditActorOrganization")
+  ownedDeviceHistory      DeviceOwnershipHistory[]   @relation("DeviceOwnerOrganization")
+  custodiedDeviceHistory  DeviceCustodyHistory[]     @relation("DeviceCustodianOrganization")
+  dealerDeviceAllocations DealerDeviceAllocation[]   @relation("DealerDeviceAllocationDealer")
+  deviceInstallations     DeviceInstallation[]       @relation("InstallationDealer")
 
   @@index([type, status])
   @@index([zoneId])
@@ -199,18 +203,28 @@ model User {
   updatedAt              DateTime   @updatedAt @db.Timestamptz(3)
   archivedAt             DateTime?  @db.Timestamptz(3)
 
-  organizationMemberships OrganizationMembership[]   @relation("OrganizationMember")
-  invitedMemberships      OrganizationMembership[]   @relation("OrganizationMembershipInviter")
-  roleAssignments         RoleAssignment[]           @relation("RoleAssignmentUser")
-  assignedRoles           RoleAssignment[]           @relation("RoleAssignmentAssigner")
-  revokedRoles            RoleAssignment[]           @relation("RoleAssignmentRevoker")
-  sessions                UserSession[]
-  customerMemberships     CustomerMembership[]       @relation("CustomerMember")
-  invitedCustomerMembers  CustomerMembership[]       @relation("CustomerMembershipInviter")
-  createdCustomerGroups   CustomerGroup[]            @relation("CustomerGroupCreator")
-  createdCustomers        Customer[]                 @relation("CustomerCreator")
-  assignedCustomers       CustomerDealerAssignment[] @relation("CustomerDealerAssigner")
-  actorAuditLogs          AuditLog[]                 @relation("AuditActorUser")
+  organizationMemberships   OrganizationMembership[]   @relation("OrganizationMember")
+  invitedMemberships        OrganizationMembership[]   @relation("OrganizationMembershipInviter")
+  roleAssignments           RoleAssignment[]           @relation("RoleAssignmentUser")
+  assignedRoles             RoleAssignment[]           @relation("RoleAssignmentAssigner")
+  revokedRoles              RoleAssignment[]           @relation("RoleAssignmentRevoker")
+  sessions                  UserSession[]
+  customerMemberships       CustomerMembership[]       @relation("CustomerMember")
+  invitedCustomerMembers    CustomerMembership[]       @relation("CustomerMembershipInviter")
+  createdCustomerGroups     CustomerGroup[]            @relation("CustomerGroupCreator")
+  createdCustomers          Customer[]                 @relation("CustomerCreator")
+  assignedCustomers         CustomerDealerAssignment[] @relation("CustomerDealerAssigner")
+  actorAuditLogs            AuditLog[]                 @relation("AuditActorUser")
+  createdVehicles           Vehicle[]                  @relation("VehicleCreator")
+  changedDeviceOwnerships   DeviceOwnershipHistory[]   @relation("DeviceOwnershipChanger")
+  custodiedDeviceHistory    DeviceCustodyHistory[]     @relation("DeviceCustodianUser")
+  changedDeviceCustodies    DeviceCustodyHistory[]     @relation("DeviceCustodyChanger")
+  allocatedDevices          DealerDeviceAllocation[]   @relation("DeviceAllocationAllocator")
+  returnedDeviceAllocations DealerDeviceAllocation[]   @relation("DeviceAllocationReturner")
+  installedDevices          DeviceInstallation[]       @relation("InstallationInstaller")
+  verifiedInstallations     DeviceInstallation[]       @relation("InstallationVerifier")
+  assignedDeviceRelations   VehicleDeviceAssignment[]  @relation("DeviceAssignmentAssigner")
+  endedDeviceRelations      VehicleDeviceAssignment[]  @relation("DeviceAssignmentEnder")
 
   @@index([status])
   @@map("users")
@@ -376,13 +390,16 @@ model Customer {
   updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
   archivedAt        DateTime?         @db.Timestamptz(3)
 
-  managingDealer      Organization?                @relation("ManagingDealer", fields: [managingDealerId], references: [id], onDelete: Restrict)
-  customerGroup       CustomerGroup?               @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
-  createdBy           User?                        @relation("CustomerCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  individualProfile   IndividualCustomerProfile?
-  organizationProfile OrganizationCustomerProfile?
-  memberships         CustomerMembership[]
-  dealerAssignments   CustomerDealerAssignment[]
+  managingDealer         Organization?                @relation("ManagingDealer", fields: [managingDealerId], references: [id], onDelete: Restrict)
+  customerGroup          CustomerGroup?               @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
+  createdBy              User?                        @relation("CustomerCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  individualProfile      IndividualCustomerProfile?
+  organizationProfile    OrganizationCustomerProfile?
+  memberships            CustomerMembership[]
+  dealerAssignments      CustomerDealerAssignment[]
+  vehicles               Vehicle[]
+  ownedDeviceHistory     DeviceOwnershipHistory[]     @relation("DeviceOwnerCustomer")
+  custodiedDeviceHistory DeviceCustodyHistory[]       @relation("DeviceCustodianCustomer")
 
   @@index([managingDealerId, status])
   @@index([customerGroupId])
@@ -492,4 +509,355 @@ model AuditLog {
   @@index([correlationId])
   @@index([occurredAt])
   @@map("audit_logs")
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  BUS
+  TRUCK
+  CNG
+  PICKUP
+  MICROBUS
+  AMBULANCE
+  CONSTRUCTION_EQUIPMENT
+  OTHER
+}
+
+enum VehicleStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum DeviceNetworkType {
+  GSM_2G
+  UMTS_3G
+  LTE_4G
+  LTE_5G
+  LORA
+  SATELLITE
+  OTHER
+}
+
+enum DeviceModelStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum DeviceLifecycleStatus {
+  RECEIVED
+  IN_STOCK
+  RESERVED
+  ALLOCATED
+  INSTALLED
+  UNDER_REPAIR
+  LOST
+  DAMAGED
+  RETIRED
+}
+
+enum DeviceOwnerType {
+  PLATFORM
+  DEALER
+  CUSTOMER
+}
+
+enum DeviceCustodianType {
+  PLATFORM
+  DEALER
+  CUSTOMER
+  USER
+}
+
+enum DeviceOwnershipReason {
+  INITIAL_STOCK
+  PURCHASE
+  SALE
+  TRANSFER
+  RETURN
+  ADJUSTMENT
+  OTHER
+}
+
+enum DeviceCustodyReason {
+  RECEIVED
+  ALLOCATION
+  INSTALLATION
+  REMOVAL
+  REPAIR
+  RETURN
+  TRANSFER
+  ADJUSTMENT
+  OTHER
+}
+
+enum DeviceAllocationStatus {
+  ALLOCATED
+  AVAILABLE
+  INSTALLED
+  RETURNED
+  CANCELLED
+}
+
+enum InstallationStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+  REMOVED
+}
+
+enum AssignmentType {
+  PRIMARY
+  SECONDARY
+  BACKUP
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum AssignmentEndReason {
+  DEVICE_FAILURE
+  DEVICE_REPLACEMENT
+  VEHICLE_TRANSFER
+  VEHICLE_SOLD
+  CUSTOMER_REQUEST
+  SUBSCRIPTION_CANCELLED
+  TRANSFER_TO_ANOTHER_VEHICLE
+  LOST
+  OTHER
+}
+
+enum InstallationRemovalReason {
+  CUSTOMER_REQUEST
+  VEHICLE_SOLD
+  DEVICE_FAILURE
+  WARRANTY_REPLACEMENT
+  SUBSCRIPTION_CANCELLED
+  TRANSFER_TO_ANOTHER_VEHICLE
+  LOST
+  OTHER
+}
+
+model Vehicle {
+  id                           String        @id @default(uuid()) @db.Uuid
+  vehicleCode                  String        @unique @db.VarChar(40)
+  customerId                   String        @db.Uuid
+  registrationNumber           String?       @db.VarChar(100)
+  normalizedRegistrationNumber String?       @unique @db.VarChar(100)
+  vehicleType                  VehicleType
+  manufacturer                 String?       @db.VarChar(120)
+  modelName                    String?       @db.VarChar(120)
+  manufacturingYear            Int?
+  color                        String?       @db.VarChar(60)
+  chassisNumber                String?       @unique @db.VarChar(120)
+  engineNumber                 String?       @unique @db.VarChar(120)
+  status                       VehicleStatus @default(PENDING)
+  createdByUserId              String?       @db.Uuid
+  createdAt                    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime      @updatedAt @db.Timestamptz(3)
+  archivedAt                   DateTime?     @db.Timestamptz(3)
+
+  customer          Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy         User?                     @relation("VehicleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  installations     DeviceInstallation[]
+  deviceAssignments VehicleDeviceAssignment[]
+
+  @@index([customerId, status])
+  @@index([vehicleType, status])
+  @@map("vehicles")
+}
+
+model DeviceModel {
+  id           String            @id @default(uuid()) @db.Uuid
+  modelCode    String            @unique @db.VarChar(60)
+  manufacturer String            @db.VarChar(120)
+  modelName    String            @db.VarChar(160)
+  protocol     String            @db.VarChar(100)
+  networkType  DeviceNetworkType
+  capabilities Json?
+  status       DeviceModelStatus @default(ACTIVE)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+  archivedAt   DateTime?         @db.Timestamptz(3)
+
+  devices Device[]
+
+  @@index([status])
+  @@map("device_models")
+}
+
+model Device {
+  id              String                @id @default(uuid()) @db.Uuid
+  deviceCode      String                @unique @db.VarChar(40)
+  deviceModelId   String                @db.Uuid
+  imei            String?               @unique @db.VarChar(32)
+  serialNumber    String?               @unique @db.VarChar(100)
+  hardwareVersion String?               @db.VarChar(60)
+  firmwareVersion String?               @db.VarChar(60)
+  lifecycleStatus DeviceLifecycleStatus @default(RECEIVED)
+  receivedAt      DateTime?             @db.Timestamptz(3)
+  retiredAt       DateTime?             @db.Timestamptz(3)
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
+
+  deviceModel        DeviceModel               @relation(fields: [deviceModelId], references: [id], onDelete: Restrict)
+  ownershipHistory   DeviceOwnershipHistory[]
+  custodyHistory     DeviceCustodyHistory[]
+  dealerAllocations  DealerDeviceAllocation[]
+  installations      DeviceInstallation[]
+  vehicleAssignments VehicleDeviceAssignment[]
+
+  @@index([deviceModelId, lifecycleStatus])
+  @@index([lifecycleStatus])
+  @@map("devices")
+}
+
+model DeviceOwnershipHistory {
+  id                  String                @id @default(uuid()) @db.Uuid
+  deviceId            String                @db.Uuid
+  ownerType           DeviceOwnerType
+  ownerOrganizationId String?               @db.Uuid
+  ownerCustomerId     String?               @db.Uuid
+  startedAt           DateTime              @default(now()) @db.Timestamptz(3)
+  endedAt             DateTime?             @db.Timestamptz(3)
+  reason              DeviceOwnershipReason
+  changedByUserId     String?               @db.Uuid
+  notes               String?
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+
+  device            Device        @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  ownerOrganization Organization? @relation("DeviceOwnerOrganization", fields: [ownerOrganizationId], references: [id], onDelete: Restrict)
+  ownerCustomer     Customer?     @relation("DeviceOwnerCustomer", fields: [ownerCustomerId], references: [id], onDelete: Restrict)
+  changedBy         User?         @relation("DeviceOwnershipChanger", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([deviceId, startedAt])
+  @@index([ownerOrganizationId, endedAt])
+  @@index([ownerCustomerId, endedAt])
+  @@map("device_ownership_history")
+}
+
+model DeviceCustodyHistory {
+  id                      String              @id @default(uuid()) @db.Uuid
+  deviceId                String              @db.Uuid
+  custodianType           DeviceCustodianType
+  custodianOrganizationId String?             @db.Uuid
+  custodianCustomerId     String?             @db.Uuid
+  custodianUserId         String?             @db.Uuid
+  startedAt               DateTime            @default(now()) @db.Timestamptz(3)
+  endedAt                 DateTime?           @db.Timestamptz(3)
+  reason                  DeviceCustodyReason
+  changedByUserId         String?             @db.Uuid
+  notes                   String?
+  createdAt               DateTime            @default(now()) @db.Timestamptz(3)
+
+  device                Device        @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  custodianOrganization Organization? @relation("DeviceCustodianOrganization", fields: [custodianOrganizationId], references: [id], onDelete: Restrict)
+  custodianCustomer     Customer?     @relation("DeviceCustodianCustomer", fields: [custodianCustomerId], references: [id], onDelete: Restrict)
+  custodianUser         User?         @relation("DeviceCustodianUser", fields: [custodianUserId], references: [id], onDelete: Restrict)
+  changedBy             User?         @relation("DeviceCustodyChanger", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([deviceId, startedAt])
+  @@index([custodianOrganizationId, endedAt])
+  @@index([custodianCustomerId, endedAt])
+  @@index([custodianUserId, endedAt])
+  @@map("device_custody_history")
+}
+
+model DealerDeviceAllocation {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  allocationCode       String                 @unique @db.VarChar(40)
+  dealerOrganizationId String                 @db.Uuid
+  deviceId             String                 @db.Uuid
+  status               DeviceAllocationStatus @default(ALLOCATED)
+  allocatedAt          DateTime               @default(now()) @db.Timestamptz(3)
+  availableAt          DateTime?              @db.Timestamptz(3)
+  installedAt          DateTime?              @db.Timestamptz(3)
+  returnedAt           DateTime?              @db.Timestamptz(3)
+  allocatedByUserId    String?                @db.Uuid
+  returnedByUserId     String?                @db.Uuid
+  notes                String?
+  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime               @updatedAt @db.Timestamptz(3)
+
+  dealerOrganization Organization @relation("DealerDeviceAllocationDealer", fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  device             Device       @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  allocatedBy        User?        @relation("DeviceAllocationAllocator", fields: [allocatedByUserId], references: [id], onDelete: SetNull)
+  returnedBy         User?        @relation("DeviceAllocationReturner", fields: [returnedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([dealerOrganizationId, status])
+  @@index([deviceId, status])
+  @@map("dealer_device_allocations")
+}
+
+model DeviceInstallation {
+  id                   String                     @id @default(uuid()) @db.Uuid
+  installationCode     String                     @unique @db.VarChar(40)
+  deviceId             String                     @db.Uuid
+  vehicleId            String                     @db.Uuid
+  dealerOrganizationId String?                    @db.Uuid
+  installedByUserId    String?                    @db.Uuid
+  installedAt          DateTime?                  @db.Timestamptz(3)
+  installationLocation Json?
+  odometerReading      Decimal?                   @db.Decimal(12, 2)
+  powerConnectionType  String?                    @db.VarChar(80)
+  ignitionConnected    Boolean                    @default(false)
+  relayConnected       Boolean                    @default(false)
+  sosConnected         Boolean                    @default(false)
+  installationNotes    String?
+  status               InstallationStatus         @default(SCHEDULED)
+  verifiedByUserId     String?                    @db.Uuid
+  verifiedAt           DateTime?                  @db.Timestamptz(3)
+  removedAt            DateTime?                  @db.Timestamptz(3)
+  removalReason        InstallationRemovalReason?
+  createdAt            DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                   @updatedAt @db.Timestamptz(3)
+
+  device             Device                   @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  vehicle            Vehicle                  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  dealerOrganization Organization?            @relation("InstallationDealer", fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  installedBy        User?                    @relation("InstallationInstaller", fields: [installedByUserId], references: [id], onDelete: SetNull)
+  verifiedBy         User?                    @relation("InstallationVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  assignment         VehicleDeviceAssignment?
+
+  @@index([deviceId, status])
+  @@index([vehicleId, status])
+  @@index([dealerOrganizationId, status])
+  @@map("device_installations")
+}
+
+model VehicleDeviceAssignment {
+  id               String               @id @default(uuid()) @db.Uuid
+  vehicleId        String               @db.Uuid
+  deviceId         String               @db.Uuid
+  installationId   String?              @unique @db.Uuid
+  assignmentType   AssignmentType       @default(PRIMARY)
+  startedAt        DateTime             @default(now()) @db.Timestamptz(3)
+  endedAt          DateTime?            @db.Timestamptz(3)
+  status           AssignmentStatus     @default(ACTIVE)
+  assignedByUserId String?              @db.Uuid
+  endedByUserId    String?              @db.Uuid
+  endReason        AssignmentEndReason?
+  endNotes         String?
+  createdAt        DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @db.Timestamptz(3)
+
+  vehicle      Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  device       Device              @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  installation DeviceInstallation? @relation(fields: [installationId], references: [id], onDelete: Restrict)
+  assignedBy   User?               @relation("DeviceAssignmentAssigner", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  endedBy      User?               @relation("DeviceAssignmentEnder", fields: [endedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([vehicleId, status])
+  @@index([deviceId, status])
+  @@index([assignmentType, status])
+  @@map("vehicle_device_assignments")
 }
