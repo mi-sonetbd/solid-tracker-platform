@@ -1,26 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicatorService } from '@nestjs/terminus';
+import { HealthIndicatorResult, HealthIndicatorService } from '@nestjs/terminus';
 import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class DatabaseHealthIndicator {
   constructor(
-    private readonly databaseService: DatabaseService,
     private readonly healthIndicatorService: HealthIndicatorService,
+    private readonly databaseService: DatabaseService,
   ) {}
 
-  async isHealthy(key: string) {
+  async isHealthy(key: string): Promise<HealthIndicatorResult> {
     const indicator = this.healthIndicatorService.check(key);
-    const startedAt = Date.now();
 
     try {
       await this.databaseService.ping();
-      return indicator.up({ latencyMs: Date.now() - startedAt });
-    } catch (error: unknown) {
-      return indicator.down({
-        latencyMs: Date.now() - startedAt,
-        message: error instanceof Error ? error.message : 'Unknown database error',
-      });
+      return indicator.up();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown PostgreSQL error';
+
+      return indicator.down({ message });
     }
   }
 }

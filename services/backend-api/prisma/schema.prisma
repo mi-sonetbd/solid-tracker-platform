@@ -1,0 +1,495 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  importFileExtension    = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  LOCKED
+  DISABLED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum OrganizationType {
+  PLATFORM
+  DEALER
+  CUSTOMER_ORGANIZATION
+}
+
+enum OrganizationStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  ARCHIVED
+}
+
+enum MembershipType {
+  OWNER
+  EMPLOYEE
+  CONTRACTOR
+  MEMBER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ENDED
+}
+
+enum ScopeType {
+  PLATFORM
+  ZONE
+  DEALER
+  CUSTOMER_GROUP
+  CUSTOMER
+  VEHICLE
+  SELF
+}
+
+enum RoleAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  EXPIRED
+}
+
+enum SessionPlatform {
+  ANDROID
+  WEB
+  IOS
+  API_CLIENT
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  ORGANIZATION
+}
+
+enum CustomerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  ARCHIVED
+}
+
+enum AcquisitionSource {
+  DIRECT
+  DEALER
+  MIGRATION
+  PARTNER
+}
+
+enum CustomerGroupStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CustomerManagementType {
+  PLATFORM
+  DEALER
+}
+
+enum AssignmentReason {
+  INITIAL_ASSIGNMENT
+  PLATFORM_ASSIGNMENT
+  DEALER_TRANSFER
+  MANUAL_CORRECTION
+  OTHER
+}
+
+model Zone {
+  id          String       @id @default(uuid()) @db.Uuid
+  code        String       @unique @db.VarChar(40)
+  name        String       @db.VarChar(120)
+  description String?
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+  archivedAt  DateTime?    @db.Timestamptz(3)
+
+  organizations Organization[]
+
+  @@index([status])
+  @@map("zones")
+}
+
+model Organization {
+  id         String             @id @default(uuid()) @db.Uuid
+  code       String             @unique @db.VarChar(40)
+  type       OrganizationType
+  name       String             @db.VarChar(160)
+  legalName  String?            @db.VarChar(200)
+  zoneId     String?            @db.Uuid
+  status     OrganizationStatus @default(PENDING)
+  createdAt  DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime           @updatedAt @db.Timestamptz(3)
+  archivedAt DateTime?          @db.Timestamptz(3)
+
+  zone              Zone?                      @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  dealerProfile     DealerProfile?
+  memberships       OrganizationMembership[]
+  customerGroups    CustomerGroup[]
+  managedCustomers  Customer[]                 @relation("ManagingDealer")
+  dealerAssignments CustomerDealerAssignment[]
+  actorAuditLogs    AuditLog[]                 @relation("AuditActorOrganization")
+
+  @@index([type, status])
+  @@index([zoneId])
+  @@map("organizations")
+}
+
+model DealerProfile {
+  organizationId          String   @id @db.Uuid
+  dealerCode              String   @unique @db.VarChar(40)
+  tradeLicenseNumber      String?  @db.VarChar(100)
+  taxIdentificationNumber String?  @db.VarChar(100)
+  contactMobile           String?  @db.VarChar(30)
+  contactEmail            String?  @db.VarChar(254)
+  commissionEnabled       Boolean  @default(true)
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@map("dealer_profiles")
+}
+
+model User {
+  id                     String     @id @default(uuid()) @db.Uuid
+  userCode               String     @unique @db.VarChar(40)
+  fullName               String     @db.VarChar(160)
+  mobileNumber           String     @db.VarChar(30)
+  normalizedMobileNumber String     @unique @db.VarChar(30)
+  email                  String?    @db.VarChar(254)
+  normalizedEmail        String?    @unique @db.VarChar(254)
+  passwordHash           String?
+  status                 UserStatus @default(PENDING_VERIFICATION)
+  mobileVerifiedAt       DateTime?  @db.Timestamptz(3)
+  emailVerifiedAt        DateTime?  @db.Timestamptz(3)
+  passwordChangedAt      DateTime?  @db.Timestamptz(3)
+  lastLoginAt            DateTime?  @db.Timestamptz(3)
+  failedLoginCount       Int        @default(0)
+  lockedUntil            DateTime?  @db.Timestamptz(3)
+  createdAt              DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime   @updatedAt @db.Timestamptz(3)
+  archivedAt             DateTime?  @db.Timestamptz(3)
+
+  organizationMemberships OrganizationMembership[]   @relation("OrganizationMember")
+  invitedMemberships      OrganizationMembership[]   @relation("OrganizationMembershipInviter")
+  roleAssignments         RoleAssignment[]           @relation("RoleAssignmentUser")
+  assignedRoles           RoleAssignment[]           @relation("RoleAssignmentAssigner")
+  revokedRoles            RoleAssignment[]           @relation("RoleAssignmentRevoker")
+  sessions                UserSession[]
+  customerMemberships     CustomerMembership[]       @relation("CustomerMember")
+  invitedCustomerMembers  CustomerMembership[]       @relation("CustomerMembershipInviter")
+  createdCustomerGroups   CustomerGroup[]            @relation("CustomerGroupCreator")
+  createdCustomers        Customer[]                 @relation("CustomerCreator")
+  assignedCustomers       CustomerDealerAssignment[] @relation("CustomerDealerAssigner")
+  actorAuditLogs          AuditLog[]                 @relation("AuditActorUser")
+
+  @@index([status])
+  @@map("users")
+}
+
+model OrganizationMembership {
+  id              String           @id @default(uuid()) @db.Uuid
+  organizationId  String           @db.Uuid
+  userId          String           @db.Uuid
+  membershipType  MembershipType
+  status          MembershipStatus @default(INVITED)
+  isPrimary       Boolean          @default(false)
+  invitedByUserId String?          @db.Uuid
+  joinedAt        DateTime?        @db.Timestamptz(3)
+  endedAt         DateTime?        @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user            User             @relation("OrganizationMember", fields: [userId], references: [id], onDelete: Restrict)
+  invitedBy       User?            @relation("OrganizationMembershipInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  roleAssignments RoleAssignment[]
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@map("organization_memberships")
+}
+
+model Role {
+  id          String       @id @default(uuid()) @db.Uuid
+  code        String       @unique @db.VarChar(80)
+  name        String       @db.VarChar(120)
+  description String?
+  status      RecordStatus @default(ACTIVE)
+  isSystem    Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+
+  permissions RolePermission[]
+  assignments RoleAssignment[]
+
+  @@index([status])
+  @@map("roles")
+}
+
+model Permission {
+  id          String       @id @default(uuid()) @db.Uuid
+  code        String       @unique @db.VarChar(120)
+  name        String       @db.VarChar(160)
+  description String?
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+
+  roles RolePermission[]
+
+  @@index([status])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String   @db.Uuid
+  permissionId String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model RoleAssignment {
+  id                       String               @id @default(uuid()) @db.Uuid
+  userId                   String               @db.Uuid
+  roleId                   String               @db.Uuid
+  organizationMembershipId String?              @db.Uuid
+  scopeType                ScopeType
+  scopeId                  String               @db.Uuid
+  status                   RoleAssignmentStatus @default(ACTIVE)
+  effectiveFrom            DateTime             @default(now()) @db.Timestamptz(3)
+  effectiveUntil           DateTime?            @db.Timestamptz(3)
+  assignedByUserId         String?              @db.Uuid
+  revokedByUserId          String?              @db.Uuid
+  revokedAt                DateTime?            @db.Timestamptz(3)
+  revocationReason         String?
+  createdAt                DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime             @updatedAt @db.Timestamptz(3)
+
+  user                   User                    @relation("RoleAssignmentUser", fields: [userId], references: [id], onDelete: Restrict)
+  role                   Role                    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  organizationMembership OrganizationMembership? @relation(fields: [organizationMembershipId], references: [id], onDelete: Restrict)
+  assignedBy             User?                   @relation("RoleAssignmentAssigner", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  revokedBy              User?                   @relation("RoleAssignmentRevoker", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId, scopeType, scopeId])
+  @@index([userId, status])
+  @@index([scopeType, scopeId, status])
+  @@map("role_assignments")
+}
+
+model UserSession {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @db.Uuid
+  tokenFamilyId    String          @db.Uuid
+  refreshTokenHash String          @unique
+  deviceName       String?         @db.VarChar(160)
+  platform         SessionPlatform
+  appVersion       String?         @db.VarChar(50)
+  ipAddress        String?         @db.VarChar(45)
+  userAgent        String?
+  status           SessionStatus   @default(ACTIVE)
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  lastUsedAt       DateTime        @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime        @db.Timestamptz(3)
+  revokedAt        DateTime?       @db.Timestamptz(3)
+  revocationReason String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model CustomerGroup {
+  id                   String              @id @default(uuid()) @db.Uuid
+  code                 String              @unique @db.VarChar(40)
+  dealerOrganizationId String              @db.Uuid
+  name                 String              @db.VarChar(120)
+  normalizedName       String              @db.VarChar(120)
+  description          String?
+  status               CustomerGroupStatus @default(ACTIVE)
+  createdByUserId      String?             @db.Uuid
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @db.Timestamptz(3)
+  archivedAt           DateTime?           @db.Timestamptz(3)
+
+  dealerOrganization Organization @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  createdBy          User?        @relation("CustomerGroupCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  customers          Customer[]
+
+  @@unique([dealerOrganizationId, normalizedName])
+  @@index([dealerOrganizationId, status])
+  @@map("customer_groups")
+}
+
+model Customer {
+  id                String            @id @default(uuid()) @db.Uuid
+  customerCode      String            @unique @db.VarChar(40)
+  customerType      CustomerType
+  status            CustomerStatus    @default(PENDING)
+  managingDealerId  String?           @db.Uuid
+  customerGroupId   String?           @db.Uuid
+  acquisitionSource AcquisitionSource
+  primaryMobile     String?           @db.VarChar(30)
+  primaryEmail      String?           @db.VarChar(254)
+  billingAddress    Json?
+  createdByUserId   String?           @db.Uuid
+  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  archivedAt        DateTime?         @db.Timestamptz(3)
+
+  managingDealer      Organization?                @relation("ManagingDealer", fields: [managingDealerId], references: [id], onDelete: Restrict)
+  customerGroup       CustomerGroup?               @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
+  createdBy           User?                        @relation("CustomerCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  individualProfile   IndividualCustomerProfile?
+  organizationProfile OrganizationCustomerProfile?
+  memberships         CustomerMembership[]
+  dealerAssignments   CustomerDealerAssignment[]
+
+  @@index([managingDealerId, status])
+  @@index([customerGroupId])
+  @@index([customerType, status])
+  @@index([primaryMobile])
+  @@map("customers")
+}
+
+model IndividualCustomerProfile {
+  customerId             String    @id @db.Uuid
+  fullName               String    @db.VarChar(160)
+  dateOfBirth            DateTime? @db.Date
+  emergencyContactName   String?   @db.VarChar(160)
+  emergencyContactMobile String?   @db.VarChar(30)
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("individual_customer_profiles")
+}
+
+model OrganizationCustomerProfile {
+  customerId         String   @id @db.Uuid
+  legalName          String   @db.VarChar(200)
+  displayName        String   @db.VarChar(160)
+  registrationNumber String?  @unique @db.VarChar(100)
+  taxReference       String?  @db.VarChar(100)
+  contactPersonName  String?  @db.VarChar(160)
+  contactMobile      String?  @db.VarChar(30)
+  contactEmail       String?  @db.VarChar(254)
+  operationalAddress Json?
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("organization_customer_profiles")
+}
+
+model CustomerMembership {
+  id              String           @id @default(uuid()) @db.Uuid
+  customerId      String           @db.Uuid
+  userId          String           @db.Uuid
+  status          MembershipStatus @default(INVITED)
+  isPrimary       Boolean          @default(false)
+  invitedByUserId String?          @db.Uuid
+  joinedAt        DateTime?        @db.Timestamptz(3)
+  endedAt         DateTime?        @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user      User     @relation("CustomerMember", fields: [userId], references: [id], onDelete: Restrict)
+  invitedBy User?    @relation("CustomerMembershipInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([customerId, userId])
+  @@index([userId, status])
+  @@index([customerId, status])
+  @@map("customer_memberships")
+}
+
+model CustomerDealerAssignment {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  customerId           String                 @db.Uuid
+  managementType       CustomerManagementType
+  dealerOrganizationId String?                @db.Uuid
+  assignedAt           DateTime               @default(now()) @db.Timestamptz(3)
+  endedAt              DateTime?              @db.Timestamptz(3)
+  assignmentReason     AssignmentReason
+  assignedByUserId     String?                @db.Uuid
+  notes                String?
+  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
+
+  customer           Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  dealerOrganization Organization? @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  assignedBy         User?         @relation("CustomerDealerAssigner", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, assignedAt])
+  @@index([dealerOrganizationId, endedAt])
+  @@map("customer_dealer_assignments")
+}
+
+model AuditLog {
+  id                  String     @id @default(uuid()) @db.Uuid
+  actorUserId         String?    @db.Uuid
+  actorOrganizationId String?    @db.Uuid
+  action              String     @db.VarChar(160)
+  resourceType        String     @db.VarChar(100)
+  resourceId          String?    @db.VarChar(100)
+  scopeType           ScopeType?
+  scopeId             String?    @db.Uuid
+  beforeData          Json?
+  afterData           Json?
+  metadata            Json?
+  ipAddress           String?    @db.VarChar(45)
+  userAgent           String?
+  correlationId       String?    @db.VarChar(100)
+  occurredAt          DateTime   @default(now()) @db.Timestamptz(3)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+
+  actorUser         User?         @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorOrganization Organization? @relation("AuditActorOrganization", fields: [actorOrganizationId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, occurredAt])
+  @@index([resourceType, resourceId])
+  @@index([correlationId])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}

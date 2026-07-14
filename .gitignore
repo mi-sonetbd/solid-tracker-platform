@@ -46,3 +46,4 @@ apps/android-app/**/build/
 
 # Generated application files
 services/backend-api/src/generated/
+services/backend-api/src/generated/prisma/
