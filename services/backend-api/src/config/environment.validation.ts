@@ -66,4 +66,8 @@ export const environmentValidationSchema = Joi.object({
   NOTIFICATION_EMAIL_PROXY_SECRET: Joi.string().allow('').default(''),
   NOTIFICATION_PUSH_PROXY_URL: Joi.string().allow('').default(''),
   NOTIFICATION_PUSH_PROXY_SECRET: Joi.string().allow('').default(''),
+  MOBILE_API_CACHE_TTL_SECONDS: Joi.number().integer().min(1).max(300).default(15),
+  MOBILE_LIVE_SESSION_TTL_SECONDS: Joi.number().integer().min(60).max(900).default(300),
+  MOBILE_LIVE_POSITION_CACHE_TTL_SECONDS: Joi.number().integer().min(1).max(30).default(5),
+  MOBILE_HISTORY_MAX_HOURS: Joi.number().integer().min(24).max(720).default(168),
 });

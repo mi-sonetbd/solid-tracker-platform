@@ -58,5 +58,6 @@ import { TraccarServersService } from './servers/traccar-servers.service';
     DeviceCommandsService,
     TrackingWebhookGuard,
   ],
+  exports: [TrackingAccessService, TrackingPositionsService],
 })
 export class TrackingApiModule {}
