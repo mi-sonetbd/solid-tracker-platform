@@ -6,6 +6,7 @@ import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { IdentityAccessModule } from './identity/identity-access.module';
+import { DealerCustomerManagementModule } from './management/dealer-customer-management.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { RedisModule } from './redis/redis.module';
     DatabaseModule,
     RedisModule,
     IdentityAccessModule,
+    DealerCustomerManagementModule,
     HealthModule,
   ],
   controllers: [AppController],

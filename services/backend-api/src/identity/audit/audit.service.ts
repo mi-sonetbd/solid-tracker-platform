@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+
+type AuditScopeType =
+  'PLATFORM' | 'ZONE' | 'DEALER' | 'CUSTOMER_GROUP' | 'CUSTOMER' | 'VEHICLE' | 'SELF';
 
 export interface AuditRecordInput {
   actorUserId?: string;
@@ -7,7 +11,11 @@ export interface AuditRecordInput {
   action: string;
   resourceType: string;
   resourceId?: string;
-  metadata?: Record<string, unknown>;
+  scopeType?: AuditScopeType;
+  scopeId?: string;
+  beforeData?: unknown;
+  afterData?: unknown;
+  metadata?: unknown;
   ipAddress?: string;
   userAgent?: string;
   correlationId?: string;
@@ -25,11 +33,23 @@ export class AuditService {
         action: input.action,
         resourceType: input.resourceType,
         resourceId: input.resourceId,
-        metadata: input.metadata ? JSON.parse(JSON.stringify(input.metadata)) : undefined,
+        scopeType: input.scopeType,
+        scopeId: input.scopeId,
+        beforeData: this.toJson(input.beforeData),
+        afterData: this.toJson(input.afterData),
+        metadata: this.toJson(input.metadata),
         ipAddress: input.ipAddress,
         userAgent: input.userAgent,
         correlationId: input.correlationId,
       },
     });
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   }
 }
