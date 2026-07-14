@@ -161,6 +161,12 @@ model Organization {
   custodiedDeviceHistory  DeviceCustodyHistory[]     @relation("DeviceCustodianOrganization")
   dealerDeviceAllocations DealerDeviceAllocation[]   @relation("DealerDeviceAllocationDealer")
   deviceInstallations     DeviceInstallation[]       @relation("InstallationDealer")
+  managedInvoices         Invoice[]                  @relation("InvoiceManagingDealer")
+  dealerCommissionRules   CommissionRule[]
+  dealerCommissionEntries CommissionEntry[]
+  dealerPayoutAccounts    DealerPayoutAccount[]
+  dealerSettlements       DealerSettlement[]
+  dealerLedgerEntries     DealerLedgerEntry[]
 
   @@index([type, status])
   @@index([zoneId])
@@ -400,6 +406,11 @@ model Customer {
   vehicles               Vehicle[]
   ownedDeviceHistory     DeviceOwnershipHistory[]     @relation("DeviceOwnerCustomer")
   custodiedDeviceHistory DeviceCustodyHistory[]       @relation("DeviceCustodianCustomer")
+  billingSubscriptions   Subscription[]
+  invoices               Invoice[]
+  payments               Payment[]
+  refunds                Refund[]
+  commissionEntries      CommissionEntry[]
 
   @@index([managingDealerId, status])
   @@index([customerGroupId])
@@ -670,6 +681,7 @@ model Vehicle {
   createdBy         User?                     @relation("VehicleCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   installations     DeviceInstallation[]
   deviceAssignments VehicleDeviceAssignment[]
+  subscriptions     Subscription[]
 
   @@index([customerId, status])
   @@index([vehicleType, status])
@@ -860,4 +872,566 @@ model VehicleDeviceAssignment {
   @@index([deviceId, status])
   @@index([assignmentType, status])
   @@map("vehicle_device_assignments")
+}
+
+enum BillingIntervalUnit {
+  DAY
+  MONTH
+  YEAR
+}
+
+enum TaxBehavior {
+  NONE
+  INCLUSIVE
+  EXCLUSIVE
+}
+
+enum ServicePlanStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+  REFUNDED
+}
+
+enum InvoiceLineItemType {
+  DEVICE_SALE
+  INSTALLATION
+  SUBSCRIPTION
+  SIM_FEE
+  REPLACEMENT
+  ADD_ON
+  DISCOUNT
+  OTHER
+}
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  BANK_TRANSFER
+  CARD
+  CASH
+  MANUAL_ADJUSTMENT
+}
+
+enum PaymentGateway {
+  NONE
+  BKASH
+  NAGAD
+  SSLCOMMERZ
+  BANK
+  MANUAL
+  OTHER
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentGatewayEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum RefundStatus {
+  REQUESTED
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum CommissionTransactionType {
+  DEVICE_SALE
+  INSTALLATION
+  INITIAL_SUBSCRIPTION
+  SUBSCRIPTION_RENEWAL
+  UPGRADE
+  ADD_ON_SERVICE
+}
+
+enum CommissionCalculationType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  TIERED
+  NONE
+}
+
+enum CommissionRuleStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CommissionEntryStatus {
+  PENDING
+  EARNED
+  ON_HOLD
+  AVAILABLE
+  SETTLEMENT_PENDING
+  SETTLED
+  REVERSED
+  CANCELLED
+}
+
+enum PayoutAccountType {
+  BANK_ACCOUNT
+  MOBILE_FINANCIAL_SERVICE
+  PAYMENT_GATEWAY_ACCOUNT
+}
+
+enum PayoutProvider {
+  BANK
+  BKASH
+  NAGAD
+  OTHER
+}
+
+enum PayoutVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum PayoutAccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum SettlementStatus {
+  DRAFT
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+enum LedgerEntryType {
+  COMMISSION_EARNED
+  COMMISSION_REVERSAL
+  SETTLEMENT
+  SETTLEMENT_REVERSAL
+  MANUAL_ADJUSTMENT
+  FEE
+}
+
+enum LedgerDirection {
+  CREDIT
+  DEBIT
+}
+
+model ServicePlan {
+  id                   String              @id @default(uuid()) @db.Uuid
+  planCode             String              @unique @db.VarChar(60)
+  planFamilyCode       String              @db.VarChar(60)
+  version              Int
+  name                 String              @db.VarChar(160)
+  description          String?
+  billingIntervalUnit  BillingIntervalUnit
+  billingIntervalCount Int                 @default(1)
+  basePrice            Decimal             @db.Decimal(14, 2)
+  currency             String              @default("BDT") @db.VarChar(3)
+  taxBehavior          TaxBehavior         @default(NONE)
+  trialDays            Int                 @default(0)
+  features             Json?
+  deviceLimit          Int?
+  historyRetentionDays Int?
+  status               ServicePlanStatus   @default(DRAFT)
+  effectiveFrom        DateTime            @db.Timestamptz(3)
+  effectiveUntil       DateTime?           @db.Timestamptz(3)
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @db.Timestamptz(3)
+  archivedAt           DateTime?           @db.Timestamptz(3)
+
+  subscriptions   Subscription[]
+  commissionRules CommissionRule[]
+
+  @@unique([planFamilyCode, version])
+  @@index([status, effectiveFrom])
+  @@map("service_plans")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  subscriptionCode   String             @unique @db.VarChar(60)
+  customerId         String             @db.Uuid
+  vehicleId          String             @db.Uuid
+  servicePlanId      String             @db.Uuid
+  status             SubscriptionStatus @default(PENDING)
+  startedAt          DateTime?          @db.Timestamptz(3)
+  currentPeriodStart DateTime?          @db.Timestamptz(3)
+  currentPeriodEnd   DateTime?          @db.Timestamptz(3)
+  nextBillingAt      DateTime?          @db.Timestamptz(3)
+  trialEndsAt        DateTime?          @db.Timestamptz(3)
+  cancelledAt        DateTime?          @db.Timestamptz(3)
+  cancellationReason String?
+  autoRenew          Boolean            @default(true)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  servicePlan ServicePlan @relation(fields: [servicePlanId], references: [id], onDelete: Restrict)
+  invoices    Invoice[]
+
+  @@index([customerId, status])
+  @@index([vehicleId, status])
+  @@index([servicePlanId, status])
+  @@index([nextBillingAt])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id                      String        @id @default(uuid()) @db.Uuid
+  invoiceNumber           String        @unique @db.VarChar(60)
+  customerId              String        @db.Uuid
+  subscriptionId          String?       @db.Uuid
+  managingDealerIdAtIssue String?       @db.Uuid
+  billingPeriodStart      DateTime?     @db.Timestamptz(3)
+  billingPeriodEnd        DateTime?     @db.Timestamptz(3)
+  issueDate               DateTime      @db.Date
+  dueDate                 DateTime      @db.Date
+  subtotal                Decimal       @db.Decimal(14, 2)
+  discountAmount          Decimal       @default(0) @db.Decimal(14, 2)
+  taxAmount               Decimal       @default(0) @db.Decimal(14, 2)
+  totalAmount             Decimal       @db.Decimal(14, 2)
+  paidAmount              Decimal       @default(0) @db.Decimal(14, 2)
+  outstandingAmount       Decimal       @db.Decimal(14, 2)
+  currency                String        @default("BDT") @db.VarChar(3)
+  status                  InvoiceStatus @default(DRAFT)
+  issuedAt                DateTime?     @db.Timestamptz(3)
+  voidedAt                DateTime?     @db.Timestamptz(3)
+  voidReason              String?
+  createdAt               DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime      @updatedAt @db.Timestamptz(3)
+
+  customer              Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  subscription          Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  managingDealerAtIssue Organization?       @relation("InvoiceManagingDealer", fields: [managingDealerIdAtIssue], references: [id], onDelete: Restrict)
+  lines                 InvoiceLine[]
+  paymentAllocations    PaymentAllocation[]
+  refunds               Refund[]
+  commissionEntries     CommissionEntry[]
+
+  @@index([customerId, status])
+  @@index([subscriptionId])
+  @@index([managingDealerIdAtIssue, status])
+  @@index([dueDate, status])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id             String              @id @default(uuid()) @db.Uuid
+  invoiceId      String              @db.Uuid
+  lineNumber     Int
+  itemType       InvoiceLineItemType
+  description    String
+  quantity       Decimal             @default(1) @db.Decimal(12, 3)
+  unitPrice      Decimal             @db.Decimal(14, 2)
+  discountAmount Decimal             @default(0) @db.Decimal(14, 2)
+  taxAmount      Decimal             @default(0) @db.Decimal(14, 2)
+  lineTotal      Decimal             @db.Decimal(14, 2)
+  referenceType  String?             @db.VarChar(100)
+  referenceId    String?             @db.VarChar(100)
+  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
+
+  invoice           Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  commissionEntries CommissionEntry[]
+
+  @@unique([invoiceId, lineNumber])
+  @@index([referenceType, referenceId])
+  @@map("invoice_lines")
+}
+
+model Payment {
+  id                   String         @id @default(uuid()) @db.Uuid
+  paymentNumber        String         @unique @db.VarChar(60)
+  customerId           String         @db.Uuid
+  amount               Decimal        @db.Decimal(14, 2)
+  currency             String         @default("BDT") @db.VarChar(3)
+  paymentMethod        PaymentMethod
+  paymentGateway       PaymentGateway @default(NONE)
+  gatewayTransactionId String?        @db.VarChar(160)
+  gatewayReference     String?        @db.VarChar(160)
+  status               PaymentStatus  @default(INITIATED)
+  initiatedAt          DateTime       @default(now()) @db.Timestamptz(3)
+  confirmedAt          DateTime?      @db.Timestamptz(3)
+  failedAt             DateTime?      @db.Timestamptz(3)
+  failureReason        String?
+  metadata             Json?
+  createdAt            DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @db.Timestamptz(3)
+
+  customer          Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  allocations       PaymentAllocation[]
+  gatewayEvents     PaymentGatewayEvent[]
+  refunds           Refund[]
+  commissionEntries CommissionEntry[]
+
+  @@unique([paymentGateway, gatewayTransactionId])
+  @@index([customerId, status])
+  @@index([status, initiatedAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  paymentId   String   @db.Uuid
+  invoiceId   String   @db.Uuid
+  amount      Decimal  @db.Decimal(14, 2)
+  allocatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId, allocatedAt])
+  @@map("payment_allocations")
+}
+
+model PaymentGatewayEvent {
+  id              String                    @id @default(uuid()) @db.Uuid
+  paymentId       String?                   @db.Uuid
+  gateway         PaymentGateway
+  externalEventId String                    @db.VarChar(200)
+  eventType       String                    @db.VarChar(120)
+  payload         Json
+  payloadHash     String                    @db.VarChar(128)
+  status          PaymentGatewayEventStatus @default(RECEIVED)
+  receivedAt      DateTime                  @default(now()) @db.Timestamptz(3)
+  processedAt     DateTime?                 @db.Timestamptz(3)
+  errorMessage    String?
+  createdAt       DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                  @updatedAt @db.Timestamptz(3)
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([gateway, externalEventId])
+  @@index([paymentId, status])
+  @@index([status, receivedAt])
+  @@map("payment_gateway_events")
+}
+
+model Refund {
+  id              String       @id @default(uuid()) @db.Uuid
+  refundNumber    String       @unique @db.VarChar(60)
+  paymentId       String       @db.Uuid
+  customerId      String       @db.Uuid
+  invoiceId       String?      @db.Uuid
+  amount          Decimal      @db.Decimal(14, 2)
+  currency        String       @default("BDT") @db.VarChar(3)
+  gatewayRefundId String?      @db.VarChar(160)
+  reason          String
+  status          RefundStatus @default(REQUESTED)
+  requestedAt     DateTime     @default(now()) @db.Timestamptz(3)
+  completedAt     DateTime?    @db.Timestamptz(3)
+  failedAt        DateTime?    @db.Timestamptz(3)
+  failureReason   String?
+  metadata        Json?
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+
+  payment  Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, status])
+  @@index([customerId, status])
+  @@map("refunds")
+}
+
+model CommissionRule {
+  id                   String                    @id @default(uuid()) @db.Uuid
+  ruleCode             String                    @unique @db.VarChar(60)
+  dealerOrganizationId String                    @db.Uuid
+  servicePlanId        String?                   @db.Uuid
+  transactionType      CommissionTransactionType
+  calculationType      CommissionCalculationType
+  percentageRate       Decimal?                  @db.Decimal(7, 4)
+  fixedAmount          Decimal?                  @db.Decimal(14, 2)
+  tierDefinition       Json?
+  minimumAmount        Decimal?                  @db.Decimal(14, 2)
+  maximumAmount        Decimal?                  @db.Decimal(14, 2)
+  priority             Int                       @default(100)
+  effectiveFrom        DateTime                  @db.Timestamptz(3)
+  effectiveUntil       DateTime?                 @db.Timestamptz(3)
+  status               CommissionRuleStatus      @default(DRAFT)
+  createdAt            DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                  @updatedAt @db.Timestamptz(3)
+  archivedAt           DateTime?                 @db.Timestamptz(3)
+
+  dealerOrganization Organization      @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  servicePlan        ServicePlan?      @relation(fields: [servicePlanId], references: [id], onDelete: Restrict)
+  entries            CommissionEntry[]
+
+  @@index([dealerOrganizationId, status])
+  @@index([servicePlanId, transactionType, status])
+  @@index([effectiveFrom, effectiveUntil])
+  @@map("commission_rules")
+}
+
+model CommissionEntry {
+  id                     String                    @id @default(uuid()) @db.Uuid
+  commissionNumber       String                    @unique @db.VarChar(60)
+  dealerOrganizationId   String                    @db.Uuid
+  customerId             String                    @db.Uuid
+  invoiceId              String?                   @db.Uuid
+  invoiceLineId          String?                   @db.Uuid
+  paymentId              String?                   @db.Uuid
+  commissionRuleId       String?                   @db.Uuid
+  reversalOfEntryId      String?                   @db.Uuid
+  transactionType        CommissionTransactionType
+  calculationType        CommissionCalculationType
+  baseAmount             Decimal                   @db.Decimal(14, 2)
+  percentageRateSnapshot Decimal?                  @db.Decimal(7, 4)
+  fixedAmountSnapshot    Decimal?                  @db.Decimal(14, 2)
+  commissionAmount       Decimal                   @db.Decimal(14, 2)
+  currency               String                    @default("BDT") @db.VarChar(3)
+  status                 CommissionEntryStatus     @default(PENDING)
+  earnedAt               DateTime?                 @db.Timestamptz(3)
+  availableAt            DateTime?                 @db.Timestamptz(3)
+  settledAt              DateTime?                 @db.Timestamptz(3)
+  holdReason             String?
+  createdAt              DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                  @updatedAt @db.Timestamptz(3)
+
+  dealerOrganization Organization          @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  customer           Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoice            Invoice?              @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  invoiceLine        InvoiceLine?          @relation(fields: [invoiceLineId], references: [id], onDelete: Restrict)
+  payment            Payment?              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  commissionRule     CommissionRule?       @relation(fields: [commissionRuleId], references: [id], onDelete: Restrict)
+  reversalOf         CommissionEntry?      @relation("CommissionReversal", fields: [reversalOfEntryId], references: [id], onDelete: Restrict)
+  reversalEntries    CommissionEntry[]     @relation("CommissionReversal")
+  settlementItem     DealerSettlementItem?
+
+  @@index([dealerOrganizationId, status])
+  @@index([customerId, status])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@index([reversalOfEntryId])
+  @@map("commission_entries")
+}
+
+model DealerPayoutAccount {
+  id                        String                   @id @default(uuid()) @db.Uuid
+  accountCode               String                   @unique @db.VarChar(60)
+  dealerOrganizationId      String                   @db.Uuid
+  accountType               PayoutAccountType
+  provider                  PayoutProvider
+  accountHolderName         String                   @db.VarChar(160)
+  maskedAccountNumber       String                   @db.VarChar(80)
+  encryptedAccountReference String
+  verificationStatus        PayoutVerificationStatus @default(UNVERIFIED)
+  isDefault                 Boolean                  @default(false)
+  status                    PayoutAccountStatus      @default(ACTIVE)
+  verifiedAt                DateTime?                @db.Timestamptz(3)
+  createdAt                 DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime                 @updatedAt @db.Timestamptz(3)
+  archivedAt                DateTime?                @db.Timestamptz(3)
+
+  dealerOrganization Organization       @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  settlements        DealerSettlement[]
+
+  @@index([dealerOrganizationId, status])
+  @@map("dealer_payout_accounts")
+}
+
+model DealerSettlement {
+  id                    String           @id @default(uuid()) @db.Uuid
+  settlementNumber      String           @unique @db.VarChar(60)
+  dealerOrganizationId  String           @db.Uuid
+  payoutAccountId       String           @db.Uuid
+  grossCommissionAmount Decimal          @db.Decimal(14, 2)
+  adjustmentAmount      Decimal          @default(0) @db.Decimal(14, 2)
+  feeAmount             Decimal          @default(0) @db.Decimal(14, 2)
+  netSettlementAmount   Decimal          @db.Decimal(14, 2)
+  currency              String           @default("BDT") @db.VarChar(3)
+  status                SettlementStatus @default(DRAFT)
+  providerReference     String?          @db.VarChar(160)
+  initiatedAt           DateTime?        @db.Timestamptz(3)
+  completedAt           DateTime?        @db.Timestamptz(3)
+  failedAt              DateTime?        @db.Timestamptz(3)
+  failureReason         String?
+  createdAt             DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @db.Timestamptz(3)
+
+  dealerOrganization Organization           @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+  payoutAccount      DealerPayoutAccount    @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+  items              DealerSettlementItem[]
+
+  @@index([dealerOrganizationId, status])
+  @@index([payoutAccountId, status])
+  @@map("dealer_settlements")
+}
+
+model DealerSettlementItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  settlementId      String   @db.Uuid
+  commissionEntryId String   @unique @db.Uuid
+  amount            Decimal  @db.Decimal(14, 2)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  settlement      DealerSettlement @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  commissionEntry CommissionEntry  @relation(fields: [commissionEntryId], references: [id], onDelete: Restrict)
+
+  @@index([settlementId])
+  @@map("dealer_settlement_items")
+}
+
+model DealerLedgerEntry {
+  id                   String          @id @default(uuid()) @db.Uuid
+  ledgerNumber         String          @unique @db.VarChar(60)
+  dealerOrganizationId String          @db.Uuid
+  entryType            LedgerEntryType
+  direction            LedgerDirection
+  amount               Decimal         @db.Decimal(14, 2)
+  currency             String          @default("BDT") @db.VarChar(3)
+  referenceType        String          @db.VarChar(100)
+  referenceId          String          @db.VarChar(100)
+  description          String
+  occurredAt           DateTime        @default(now()) @db.Timestamptz(3)
+  createdAt            DateTime        @default(now()) @db.Timestamptz(3)
+
+  dealerOrganization Organization @relation(fields: [dealerOrganizationId], references: [id], onDelete: Restrict)
+
+  @@index([dealerOrganizationId, occurredAt])
+  @@index([referenceType, referenceId])
+  @@map("dealer_ledger_entries")
 }
