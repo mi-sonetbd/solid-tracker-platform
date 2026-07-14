@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { IdentityAccessModule } from './identity/identity-access.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { RedisModule } from './redis/redis.module';
     }),
     DatabaseModule,
     RedisModule,
+    IdentityAccessModule,
     HealthModule,
   ],
   controllers: [AppController],

@@ -25,7 +25,8 @@
                     "prisma:migrate:status":  "prisma migrate status --config prisma.config.ts",
                     "prisma:seed":  "prisma db seed --config prisma.config.ts",
                     "prisma:studio":  "prisma studio --config prisma.config.ts",
-                    "prebuild":  "prisma generate --config prisma.config.ts"
+                    "prebuild":  "prisma generate --config prisma.config.ts",
+                    "identity:create-admin":  "tsx src/identity/cli/create-platform-admin.ts"
                 },
     "jest":  {
                  "moduleFileExtensions":  [
@@ -48,6 +49,7 @@
                          "@nestjs/common":  "^11.1.28",
                          "@nestjs/config":  "^4.0.4",
                          "@nestjs/core":  "^11.1.28",
+                         "@nestjs/jwt":  "11.0.2",
                          "@nestjs/platform-express":  "^11.1.28",
                          "@nestjs/swagger":  "^11.4.5",
                          "@nestjs/terminus":  "^11.1.1",

@@ -31,7 +31,8 @@
                     "db:migrate:dev":  "pnpm --filter @solid-tracker/backend-api prisma:migrate:dev",
                     "db:migrate:status":  "pnpm --filter @solid-tracker/backend-api prisma:migrate:status",
                     "db:seed":  "pnpm --filter @solid-tracker/backend-api prisma:seed",
-                    "db:studio":  "pnpm --filter @solid-tracker/backend-api prisma:studio"
+                    "db:studio":  "pnpm --filter @solid-tracker/backend-api prisma:studio",
+                    "identity:create-admin":  "pnpm --filter @solid-tracker/backend-api identity:create-admin"
                 },
     "scarfSettings":  {
                           "enabled":  false
