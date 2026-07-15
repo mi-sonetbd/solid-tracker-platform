@@ -3,22 +3,13 @@ import "server-only";
 import { authConfig } from "@/lib/auth/auth-config";
 import type {
   CreateDealerInput,
+  CreateDealerManagerInput,
   DealerListResponse,
+  DealerStaffMembership,
   DealerSummary,
+  ManagementBackendResult,
+  ProvisionedDealerStaff,
 } from "@/lib/management/dealer-types";
-
-export type DealerBackendResult<T> =
-  | {
-      ok: true;
-      status: number;
-      data: T;
-    }
-  | {
-      ok: false;
-      status: number;
-      message: string;
-      details?: unknown;
-    };
 
 async function parseResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -57,7 +48,7 @@ async function dealerRequest<T>(
   accessToken: string,
   path: string,
   init: RequestInit,
-): Promise<DealerBackendResult<T>> {
+): Promise<ManagementBackendResult<T>> {
   try {
     const response = await fetch(
       `${authConfig.apiBaseUrl}${path}`,
@@ -136,6 +127,37 @@ export function backendCreateDealer(
   return dealerRequest<DealerSummary>(
     accessToken,
     "/dealers",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function backendListDealerStaff(
+  accessToken: string,
+  dealerId: string,
+) {
+  return dealerRequest<DealerStaffMembership[]>(
+    accessToken,
+    `/dealers/${dealerId}/staff`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export function backendCreateDealerManager(
+  accessToken: string,
+  dealerId: string,
+  input: CreateDealerManagerInput,
+) {
+  return dealerRequest<ProvisionedDealerStaff>(
+    accessToken,
+    `/dealers/${dealerId}/staff`,
     {
       method: "POST",
       headers: {

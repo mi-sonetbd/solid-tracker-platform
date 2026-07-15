@@ -21,6 +21,9 @@ export default async function ManagementAccountsPage() {
         canManageCustomers(session.workspace) &&
         permissions.has("customer.manage")
       }
+      canManageDealerStaff={permissions.has(
+        "dealer.staff.manage",
+      )}
     />
   );
 }

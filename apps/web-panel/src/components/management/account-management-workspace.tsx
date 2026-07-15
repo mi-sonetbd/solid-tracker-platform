@@ -16,12 +16,15 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { AddDealerManagerModal } from "@/components/management/add-dealer-manager-modal";
 import { AddDealerModal } from "@/components/management/add-dealer-modal";
 import { AccountTree } from "@/components/management/account-tree";
+import { DealerStaffModal } from "@/components/management/dealer-staff-modal";
 import type {
   DealerListResponse,
   DealerSummary,
   ManagementApiError,
+  ProvisionedDealerStaff,
 } from "@/lib/management/dealer-types";
 
 type AccountManagementWorkspaceProps = {
@@ -29,6 +32,7 @@ type AccountManagementWorkspaceProps = {
   canCreateDealer: boolean;
   canViewDealers: boolean;
   canCreateCustomer: boolean;
+  canManageDealerStaff: boolean;
 };
 
 function formatDate(value: string) {
@@ -48,8 +52,18 @@ export function AccountManagementWorkspace({
   canCreateDealer,
   canViewDealers,
   canCreateCustomer,
+  canManageDealerStaff,
 }: AccountManagementWorkspaceProps) {
   const [addDealerOpen, setAddDealerOpen] = useState(false);
+  const [managerDealerId, setManagerDealerId] = useState<
+    string | null
+  >(null);
+  const [managerModalOpen, setManagerModalOpen] =
+    useState(false);
+  const [staffDealer, setStaffDealer] =
+    useState<DealerSummary | null>(null);
+  const [staffRefreshVersion, setStaffRefreshVersion] =
+    useState(0);
   const [dealers, setDealers] = useState<DealerSummary[]>([]);
   const [loadingDealers, setLoadingDealers] =
     useState(canViewDealers);
@@ -158,6 +172,40 @@ export function AccountManagementWorkspace({
     setDealerTotal((current) => current + 1);
   }
 
+  function openManagerModal(dealerId?: string) {
+    setManagerDealerId(dealerId ?? null);
+    setManagerModalOpen(true);
+  }
+
+  function managerCreated(
+    result: ProvisionedDealerStaff,
+    dealer: DealerSummary,
+  ) {
+    setManagerModalOpen(false);
+    setManagerDealerId(null);
+    setSuccessMessage(
+      `${result.user.fullName} is now a Dealer Manager for ${dealer.name}. Login mobile: ${result.user.mobileNumber}.`,
+    );
+    setDealers((current) =>
+      current.map((item) =>
+        item.id === dealer.id
+          ? {
+              ...item,
+              _count: {
+                memberships:
+                  (item._count?.memberships ?? 0) + 1,
+                customerGroups:
+                  item._count?.customerGroups ?? 0,
+                managedCustomers:
+                  item._count?.managedCustomers ?? 0,
+              },
+            }
+          : item,
+      ),
+    );
+    setStaffRefreshVersion((value) => value + 1);
+  }
+
   return (
     <>
       <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-w-[1180px] overflow-hidden p-2">
@@ -255,17 +303,30 @@ export function AccountManagementWorkspace({
               </h2>
 
               <p className="mt-2 min-h-12 text-[11px] leading-5 text-[#71819c]">
-                Dealer owner and manager provisioning follows after Dealer creation is approved.
+                Create a Dealer-scoped login with the system Dealer Manager role.
               </p>
 
               <button
                 type="button"
-                disabled
-                className="mt-4 flex h-9 items-center gap-2 rounded-[3px] bg-[#b8c7dc] px-4 text-[11px] font-semibold text-white"
+                disabled={
+                  !canManageDealerStaff || dealers.length === 0
+                }
+                onClick={() => openManagerModal()}
+                className="mt-4 flex h-9 items-center gap-2 rounded-[3px] bg-[#357cf4] px-4 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#b8c7dc]"
               >
                 <CirclePlus className="h-4 w-4" />
                 Add Dealer Manager
               </button>
+
+              {!canManageDealerStaff ? (
+                <p className="mt-2 text-[10px] text-[#9a6a36]">
+                  Requires dealer.staff.manage permission.
+                </p>
+              ) : dealers.length === 0 ? (
+                <p className="mt-2 text-[10px] text-[#9a6a36]">
+                  Create or load a Dealer before adding staff.
+                </p>
+              ) : null}
             </article>
           </div>
 
@@ -354,7 +415,7 @@ export function AccountManagementWorkspace({
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] text-left text-[11px]">
+                <table className="w-full min-w-[1080px] text-left text-[11px]">
                   <thead className="bg-[#edf2f8] text-[#405779]">
                     <tr>
                       {[
@@ -366,6 +427,7 @@ export function AccountManagementWorkspace({
                         "Staff",
                         "Status",
                         "Created",
+                        "Actions",
                       ].map((heading) => (
                         <th
                           key={heading}
@@ -437,6 +499,32 @@ export function AccountManagementWorkspace({
                         <td className="px-4 py-4">
                           {formatDate(dealer.createdAt)}
                         </td>
+
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={!canManageDealerStaff}
+                              onClick={() =>
+                                setStaffDealer(dealer)
+                              }
+                              className="h-8 rounded-[3px] border border-[#cfd8e7] px-3 text-[10px] font-semibold text-[#52698e] disabled:opacity-50"
+                            >
+                              Staff
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!canManageDealerStaff}
+                              onClick={() =>
+                                openManagerModal(dealer.id)
+                              }
+                              className="h-8 rounded-[3px] bg-[#357cf4] px-3 text-[10px] font-semibold text-white disabled:bg-[#b8c7dc]"
+                            >
+                              Add Manager
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -451,6 +539,30 @@ export function AccountManagementWorkspace({
         <AddDealerModal
           onClose={() => setAddDealerOpen(false)}
           onCreated={dealerCreated}
+        />
+      ) : null}
+
+      {staffDealer ? (
+        <DealerStaffModal
+          dealer={staffDealer}
+          canManageStaff={canManageDealerStaff}
+          refreshVersion={staffRefreshVersion}
+          onAddManager={() =>
+            openManagerModal(staffDealer.id)
+          }
+          onClose={() => setStaffDealer(null)}
+        />
+      ) : null}
+
+      {managerModalOpen ? (
+        <AddDealerManagerModal
+          dealers={dealers}
+          initialDealerId={managerDealerId ?? undefined}
+          onClose={() => {
+            setManagerModalOpen(false);
+            setManagerDealerId(null);
+          }}
+          onCreated={managerCreated}
         />
       ) : null}
     </>
