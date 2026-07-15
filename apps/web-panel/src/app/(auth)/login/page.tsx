@@ -1,15 +1,27 @@
-"use client";
-
-import {
-  Check,
-  ChevronDown,
-  ChevronsRight,
-  Eye,
-  LockKeyhole,
-  UserRound,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Suspense } from "react";
+import { LoginForm } from "@/components/auth/login-form";
 import { LoginVisual } from "@/components/auth/login-visual";
 import { SolidTrackerWordmark } from "@/components/brand/solid-tracker-wordmark";
+
+function LoginFormFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      className="mx-auto mt-9 w-full max-w-[282px] animate-pulse"
+    >
+      <div className="h-9 rounded-[3px] bg-[#edf1f7]" />
+      <div className="mt-3 h-9 rounded-[3px] bg-[#edf1f7]" />
+
+      <div className="mt-3 flex items-center justify-between">
+        <div className="h-3.5 w-24 rounded bg-[#edf1f7]" />
+        <div className="h-3.5 w-28 rounded bg-[#edf1f7]" />
+      </div>
+
+      <div className="mt-10 h-9 rounded-[3px] bg-[#dbe7fb]" />
+    </div>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -33,58 +45,9 @@ export default function LoginPage() {
             <SolidTrackerWordmark href="" />
           </div>
 
-          <form className="mx-auto mt-9 w-full max-w-[282px]">
-            <label className="st-input-focus flex h-9 items-center rounded-[3px] border border-[#ced7e5] px-3 transition">
-              <UserRound className="h-4 w-4 shrink-0 text-[#627694]" />
-              <input
-                type="text"
-                name="username"
-                autoComplete="username"
-                defaultValue="admin"
-                className="min-w-0 flex-1 border-0 bg-transparent px-2 text-[12px] text-[#465c7f] outline-none"
-              />
-            </label>
-
-            <label className="st-input-focus mt-3 flex h-9 items-center rounded-[3px] border border-[#ced7e5] px-3 transition">
-              <LockKeyhole className="h-4 w-4 shrink-0 text-[#627694]" />
-              <input
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                defaultValue="solidtracker"
-                className="min-w-0 flex-1 border-0 bg-transparent px-2 text-[12px] text-[#465c7f] outline-none"
-              />
-              <Eye className="h-4 w-4 text-[#627694]" />
-            </label>
-
-            <div className="mt-3 flex items-center justify-between text-[12px]">
-              <label className="flex items-center gap-2 text-[#52698e]">
-                <span className="grid h-3.5 w-3.5 place-items-center rounded-[2px] bg-[#4b83f7] text-white">
-                  <Check className="h-3 w-3" strokeWidth={3} />
-                </span>
-                Remember me
-              </label>
-
-              <button type="button" className="text-[#52698e]">
-                Forgot your password?
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="mt-10 h-9 w-full rounded-[3px] bg-[#397bf3] text-[13px] font-semibold text-white transition hover:bg-[#2766d5]"
-            >
-              Login
-            </button>
-
-            <button
-              type="button"
-              className="mt-1 flex w-full items-center justify-end gap-0.5 text-right text-[12px] text-[#397bf3]"
-            >
-              <span>Demo</span>
-              <ChevronsRight className="h-3.5 w-3.5" />
-            </button>
-          </form>
+          <Suspense fallback={<LoginFormFallback />}>
+            <LoginForm />
+          </Suspense>
 
           <footer className="mt-auto flex justify-center gap-3 text-[11px] text-[#7c8ba5]">
             <button type="button">Terms of Service</button>

@@ -12,7 +12,7 @@ import {
   mainNavigation,
   sectionNavigation,
   type MainSection,
-} from "@/config/reference-navigation";
+} from "@/config/customer-navigation";
 
 function resolveSection(pathname: string): MainSection {
   if (pathname.startsWith("/report")) return "report";
@@ -27,10 +27,15 @@ function isNavigationActive(pathname: string, href: string) {
   return href !== "/" && pathname.startsWith(`${href}/`);
 }
 
-export function ReferenceShell({
+export function CustomerShell({
   children,
+  user,
 }: Readonly<{
   children: React.ReactNode;
+  user: {
+    fullName: string;
+    workspaceLabel: string;
+  };
 }>) {
   const pathname = usePathname();
   const activeSection = resolveSection(pathname);
@@ -79,7 +84,7 @@ export function ReferenceShell({
             type="button"
             className="flex items-center gap-1 text-white"
           >
-            <span>admin</span>
+            <span title={user.workspaceLabel}>{user.fullName}</span>
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
