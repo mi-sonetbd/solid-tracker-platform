@@ -3,6 +3,7 @@
 import {
   Check,
   ChevronDown,
+  ChevronsRight,
   Eye,
   LockKeyhole,
   UserRound,
@@ -78,9 +79,10 @@ export default function LoginPage() {
 
             <button
               type="button"
-              className="mt-1 block w-full text-right text-[12px] text-[#397bf3]"
+              className="mt-1 flex w-full items-center justify-end gap-0.5 text-right text-[12px] text-[#397bf3]"
             >
-              Demo Â»
+              <span>Demo</span>
+              <ChevronsRight className="h-3.5 w-3.5" />
             </button>
           </form>
 

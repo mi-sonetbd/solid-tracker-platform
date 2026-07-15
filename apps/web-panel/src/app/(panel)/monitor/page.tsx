@@ -1,4 +1,5 @@
 import {
+  ArrowUp,
   Car,
   ChevronDown,
   CirclePlus,
@@ -13,6 +14,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Signal,
   SlidersHorizontal,
   Target,
 } from "lucide-react";
@@ -54,10 +56,32 @@ export default function MonitorPage() {
                 <span className="rounded-[3px] bg-[#edf2f8] px-2 py-1 font-semibold text-[#344b72]">
                   All 1
                 </span>
-                <span className="font-semibold text-[#30b56a]">â–² 1</span>
-                <span className="font-semibold text-[#ff5b75]">â™¥ 0</span>
-                <span className="font-semibold text-[#344b72]">â–¥ 0</span>
+
+                <span
+                  className="flex items-center gap-0.5 font-semibold text-[#30b56a]"
+                  title="Online devices"
+                >
+                  <ArrowUp className="h-3 w-3" strokeWidth={2.8} />
+                  1
+                </span>
+
+                <span
+                  className="flex items-center gap-0.5 font-semibold text-[#ff5b75]"
+                  title="Alert devices"
+                >
+                  <Heart className="h-3 w-3" fill="currentColor" />
+                  0
+                </span>
+
+                <span
+                  className="flex items-center gap-0.5 font-semibold text-[#344b72]"
+                  title="Signal unavailable"
+                >
+                  <Signal className="h-3 w-3" />
+                  0
+                </span>
               </div>
+
               <div className="flex items-center gap-2.5">
                 <Eye className="h-3.5 w-3.5" />
                 <Filter className="h-3.5 w-3.5" />
@@ -74,6 +98,7 @@ export default function MonitorPage() {
                   <ChevronDown className="h-3.5 w-3.5" />
                   <span>Default group(1)</span>
                 </div>
+
                 <div className="flex items-center gap-3">
                   <Eye className="h-3.5 w-3.5" />
                   <MoreVertical className="h-4 w-4" />
@@ -93,9 +118,11 @@ export default function MonitorPage() {
                       </h2>
                       <span className="text-[10px] text-[#637493]">1hr+</span>
                     </div>
+
                     <p className="mt-1 text-[10px] text-[#9aa8bd]">
                       2026-07-15 11:11:01
                     </p>
+
                     <div className="mt-3 flex items-center justify-end gap-3.5 text-[#8090aa]">
                       <Heart className="h-3.5 w-3.5" fill="#c8d0dd" />
                       <Pencil className="h-3.5 w-3.5" />
@@ -116,7 +143,7 @@ export default function MonitorPage() {
           aria-label="Collapse object panel"
           className="absolute -right-[7px] top-1/2 z-[1001] grid h-36 w-[8px] -translate-y-1/2 place-items-center rounded-r bg-[#d9e3f2] text-[#6e80a0]"
         >
-          â€¹
+          {"<"}
         </button>
       </section>
 

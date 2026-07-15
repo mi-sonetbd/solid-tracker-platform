@@ -37,6 +37,8 @@ function SummaryCard({
   );
 }
 
+const yAxisValues = ["1", "0.8", "0.6", "0.4", "0.2", "0"];
+
 export default function FleetPage() {
   return (
     <div className="min-h-[calc(100vh-var(--st-topbar-height))] bg-[#f1f4f8] p-2">
@@ -130,7 +132,7 @@ export default function FleetPage() {
           </div>
         </article>
 
-        <article className="min-h-[350px] rounded-[5px] bg-white p-4 shadow-sm">
+        <article className="min-h-[350px] overflow-hidden rounded-[5px] bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-[13px] font-semibold text-[#405779]">
@@ -156,25 +158,14 @@ export default function FleetPage() {
             <span>Parked duration</span>
           </div>
 
-          <div className="st-chart-grid relative mt-6 h-[245px] border-b border-l border-[#e2e8f1]">
-            {[
-              ["1", "-6px"],
-              ["0.8", "48px"],
-              ["0.6", "102px"],
-              ["0.4", "156px"],
-              ["0.2", "210px"],
-            ].map(([value, top]) => (
-              <span
-                key={value}
-                className="absolute -left-7 text-[9px] text-[#8b9ab4]"
-                style={{ top }}
-              >
-                {value}
-              </span>
-            ))}
-            <span className="absolute -bottom-[5px] -left-5 text-[9px] text-[#8b9ab4]">
-              0
-            </span>
+          <div className="mt-6 grid h-[245px] min-w-0 grid-cols-[34px_minmax(0,1fr)]">
+            <div className="flex h-full flex-col justify-between pb-[1px] pr-2 text-right text-[9px] leading-none text-[#8b9ab4]">
+              {yAxisValues.map((value) => (
+                <span key={value}>{value}</span>
+              ))}
+            </div>
+
+            <div className="st-chart-grid min-w-0 border-b border-l border-[#e2e8f1]" />
           </div>
         </article>
       </section>
