@@ -88,7 +88,7 @@ function parseInstallation(payload: unknown): InstallDeviceInput {
     ignitionConnected: optionalBoolean(value.ignitionConnected),
     relayConnected: optionalBoolean(value.relayConnected),
     sosConnected: optionalBoolean(value.sosConnected),
-    notes: optionalText(value.notes, 2000),
+    installationNotes: optionalText(value.installationNotes, 2000),
   };
 }
 

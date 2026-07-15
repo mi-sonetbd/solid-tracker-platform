@@ -209,7 +209,7 @@ export function InstallCustomerDeviceModal({
       ignitionConnected,
       relayConnected,
       sosConnected,
-      notes: notes.trim() || undefined,
+      installationNotes: notes.trim() || undefined,
     };
 
     setSubmitting(true);

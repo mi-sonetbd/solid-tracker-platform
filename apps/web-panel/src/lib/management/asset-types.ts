@@ -10,13 +10,45 @@ export type VehicleType =
   | "CONSTRUCTION_EQUIPMENT"
   | "OTHER";
 
+export type DeviceNetworkType =
+  | "GSM_2G"
+  | "UMTS_3G"
+  | "LTE_4G"
+  | "LTE_5G"
+  | "LORA"
+  | "SATELLITE"
+  | "OTHER";
+
 export type DeviceModelSummary = {
   id: string;
   modelCode: string;
   manufacturer: string;
   modelName: string;
   protocol: string;
-  networkType: string | null;
+  networkType: DeviceNetworkType | null;
+  capabilities?: Record<string, unknown> | null;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    devices: number;
+  };
+};
+
+export type DeviceModelListResponse = {
+  items: DeviceModelSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type CreateDeviceModelInput = {
+  manufacturer: string;
+  modelName: string;
+  protocol: string;
+  networkType: DeviceNetworkType;
+  capabilities?: Record<string, unknown>;
 };
 
 export type DeviceAssignmentSummary = {
@@ -75,7 +107,10 @@ export type CreateVehicleInput = {
 
 export type DealerDeviceAllocationSummary = {
   id: string;
+  allocationCode?: string;
   status: string;
+  allocatedAt?: string;
+  availableAt?: string | null;
   dealerOrganizationId: string;
   dealerOrganization: {
     id: string;
@@ -93,13 +128,26 @@ export type DeviceSummary = {
   hardwareVersion: string | null;
   firmwareVersion: string | null;
   lifecycleStatus: string;
+  receivedAt?: string | null;
+  retiredAt?: string | null;
   createdAt: string;
+  updatedAt?: string;
   deviceModel: DeviceModelSummary;
   dealerAllocations: DealerDeviceAllocationSummary[];
   vehicleAssignments: Array<{
     id: string;
     status: string;
     vehicleId: string;
+  }>;
+  ownershipHistory?: Array<{
+    id: string;
+    ownerType: string;
+    ownerOrganizationId: string | null;
+  }>;
+  custodyHistory?: Array<{
+    id: string;
+    custodianType: string;
+    custodianOrganizationId: string | null;
   }>;
 };
 
@@ -111,8 +159,39 @@ export type DeviceListResponse = {
   totalPages: number;
 };
 
+export type RegisterDeviceInput = {
+  deviceModelId: string;
+  imei?: string;
+  serialNumber?: string;
+  hardwareVersion?: string;
+  firmwareVersion?: string;
+  receivedAt?: string;
+};
+
+export type AllocateDeviceInput = {
+  dealerOrganizationId: string;
+  notes?: string;
+};
+
+export type DealerDeviceAllocationResult = {
+  id: string;
+  allocationCode: string;
+  dealerOrganizationId: string;
+  deviceId: string;
+  status: string;
+  allocatedAt: string;
+  availableAt: string | null;
+  dealerOrganization: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  device: DeviceSummary;
+};
+
 export type InstallDeviceInput = {
   vehicleId: string;
+  installedAt?: string;
   latitude?: number;
   longitude?: number;
   odometerReading?: number;
@@ -120,7 +199,7 @@ export type InstallDeviceInput = {
   ignitionConnected?: boolean;
   relayConnected?: boolean;
   sosConnected?: boolean;
-  notes?: string;
+  installationNotes?: string;
 };
 
 export type DeviceInstallationResult = {

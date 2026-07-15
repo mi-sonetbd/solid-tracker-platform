@@ -2,10 +2,17 @@ import "server-only";
 
 import { authConfig } from "@/lib/auth/auth-config";
 import type {
+  AllocateDeviceInput,
+  CreateDeviceModelInput,
   CreateVehicleInput,
+  DealerDeviceAllocationResult,
   DeviceInstallationResult,
   DeviceListResponse,
+  DeviceModelListResponse,
+  DeviceModelSummary,
+  DeviceSummary,
   InstallDeviceInput,
+  RegisterDeviceInput,
   VehicleListResponse,
   VehicleSummary,
 } from "@/lib/management/asset-types";
@@ -86,6 +93,45 @@ async function assetRequest<T>(
   }
 }
 
+export function backendListDeviceModels(
+  accessToken: string,
+  query: {
+    page: number;
+    pageSize: number;
+    search?: string;
+  },
+) {
+  const parameters = new URLSearchParams({
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  });
+
+  if (query.search) parameters.set("search", query.search);
+
+  return assetRequest<DeviceModelListResponse>(
+    accessToken,
+    `/device-models?${parameters.toString()}`,
+    { method: "GET" },
+  );
+}
+
+export function backendCreateDeviceModel(
+  accessToken: string,
+  input: CreateDeviceModelInput,
+) {
+  return assetRequest<DeviceModelSummary>(
+    accessToken,
+    "/device-models",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export function backendListVehicles(
   accessToken: string,
   query: {
@@ -130,6 +176,7 @@ export function backendListDevices(
     pageSize: number;
     search?: string;
     lifecycleStatus?: string;
+    deviceModelId?: string;
     dealerOrganizationId?: string;
   },
 ) {
@@ -142,6 +189,9 @@ export function backendListDevices(
   if (query.lifecycleStatus) {
     parameters.set("lifecycleStatus", query.lifecycleStatus);
   }
+  if (query.deviceModelId) {
+    parameters.set("deviceModelId", query.deviceModelId);
+  }
   if (query.dealerOrganizationId) {
     parameters.set("dealerOrganizationId", query.dealerOrganizationId);
   }
@@ -150,6 +200,37 @@ export function backendListDevices(
     accessToken,
     `/devices?${parameters.toString()}`,
     { method: "GET" },
+  );
+}
+
+export function backendRegisterDevice(
+  accessToken: string,
+  input: RegisterDeviceInput,
+) {
+  return assetRequest<DeviceSummary>(accessToken, "/devices", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function backendAllocateDevice(
+  accessToken: string,
+  deviceId: string,
+  input: AllocateDeviceInput,
+) {
+  return assetRequest<DealerDeviceAllocationResult>(
+    accessToken,
+    `/devices/${deviceId}/allocate`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
   );
 }
 
