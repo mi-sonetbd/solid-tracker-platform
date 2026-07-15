@@ -442,6 +442,25 @@ export function DeviceManagementWorkspace({
     });
   }
 
+  function openSingleTransfer(device: DeviceSummary) {
+    const blocked =
+      (device.vehicleAssignments?.length ?? 0) > 0 ||
+      !["RECEIVED", "IN_STOCK", "ALLOCATED"].includes(
+        device.lifecycleStatus,
+      );
+
+    if (blocked) {
+      setError(
+        "Installed or lifecycle-blocked Devices must be removed or returned before transfer.",
+      );
+      return;
+    }
+
+    setSelectedIds(new Set([device.id]));
+    setTransferModalOpen(true);
+    setError("");
+  }
+
   function modelCreated(model: DeviceModelSummary) {
     setModels((current) => [model, ...current]);
     setModelModalOpen(false);
@@ -718,13 +737,14 @@ export function DeviceManagementWorkspace({
                     <th className="px-3 py-3">Subscription</th>
                     <th className="px-3 py-3">Expiration</th>
                     <th className="px-3 py-3">Status</th>
+                    <th className="px-3 py-3">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={10} className="py-20 text-center">
+                      <td colSpan={11} className="py-20 text-center">
                         <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-[#357cf4]" />
                         <p className="mt-3 text-[#71819c]">
                           Loading scoped Devices
@@ -733,7 +753,7 @@ export function DeviceManagementWorkspace({
                     </tr>
                   ) : devices.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-20 text-center text-[#8b9ab4]">
+                      <td colSpan={11} className="py-20 text-center text-[#8b9ab4]">
                         No Device exists in the selected hierarchy scope.
                       </td>
                     </tr>
@@ -787,6 +807,27 @@ export function DeviceManagementWorkspace({
                           >
                             {device.lifecycleStatus.replaceAll("_", " ")}
                           </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            onClick={() => openSingleTransfer(device)}
+                            disabled={
+                              !canTransferDevices ||
+                              (device.vehicleAssignments?.length ?? 0) > 0 ||
+                              ![
+                                "RECEIVED",
+                                "IN_STOCK",
+                                "ALLOCATED",
+                              ].includes(device.lifecycleStatus)
+                            }
+                            aria-label={`Sell or move ${device.deviceCode}`}
+                            title="Sell or move this Device"
+                            className="inline-flex h-7 items-center gap-1 rounded-[3px] border border-[#357cf4] px-2 text-[9px] font-semibold text-[#357cf4] hover:bg-[#357cf4] hover:text-white disabled:cursor-not-allowed disabled:border-[#cbd5e1] disabled:text-[#a4afc0] disabled:hover:bg-transparent"
+                          >
+                            <MoveRight className="h-3 w-3" />
+                            Sell/move
+                          </button>
                         </td>
                       </tr>
                     ))
