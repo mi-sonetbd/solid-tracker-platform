@@ -20,6 +20,7 @@ import { AddCustomerOwnerModal } from "@/components/management/add-customer-owne
 import { AddDealerManagerModal } from "@/components/management/add-dealer-manager-modal";
 import { AddDealerModal } from "@/components/management/add-dealer-modal";
 import { AccountTree } from "@/components/management/account-tree";
+import { CustomerAssetsModal } from "@/components/management/customer-assets-modal";
 import { CustomerMembersModal } from "@/components/management/customer-members-modal";
 import { DealerStaffModal } from "@/components/management/dealer-staff-modal";
 import type {
@@ -46,6 +47,10 @@ type AccountManagementWorkspaceProps = {
   canManageDealerStaff: boolean;
   canManageCustomerMembers: boolean;
   canChooseCustomerAssignment: boolean;
+  canViewVehicles: boolean;
+  canCreateVehicles: boolean;
+  canViewDevices: boolean;
+  canInstallDevices: boolean;
 };
 
 function formatDate(value: string) {
@@ -88,6 +93,10 @@ export function AccountManagementWorkspace({
   canManageDealerStaff,
   canManageCustomerMembers,
   canChooseCustomerAssignment,
+  canViewVehicles,
+  canCreateVehicles,
+  canViewDevices,
+  canInstallDevices,
 }: AccountManagementWorkspaceProps) {
   const [directoryTab, setDirectoryTab] = useState<DirectoryTab>("DEALERS");
   const [addDealerOpen, setAddDealerOpen] = useState(false);
@@ -101,6 +110,8 @@ export function AccountManagementWorkspace({
   const [ownerCustomer, setOwnerCustomer] = useState<CustomerSummary | null>(
     null,
   );
+  const [assetsCustomer, setAssetsCustomer] =
+    useState<CustomerSummary | null>(null);
   const [memberRefreshVersion, setMemberRefreshVersion] = useState(0);
   const [dealers, setDealers] = useState<DealerSummary[]>([]);
   const [loadingDealers, setLoadingDealers] = useState(canViewDealers);
@@ -391,6 +402,27 @@ export function AccountManagementWorkspace({
     if (provisionOwner) {
       setOwnerCustomer(normalizedCustomer);
     }
+  }
+
+  function customerVehicleCountChanged(
+    customerId: string,
+    count: number,
+  ) {
+    setCustomers((current) =>
+      current.map((customer) =>
+        customer.id === customerId
+          ? {
+              ...customer,
+              _count: {
+                memberships: customer._count?.memberships ?? 0,
+                vehicles: count,
+                billingSubscriptions:
+                  customer._count?.billingSubscriptions ?? 0,
+              },
+            }
+          : customer,
+      ),
+    );
   }
 
   function ownerCreated(member: ProvisionedCustomerMember) {
@@ -1039,6 +1071,15 @@ export function AccountManagementWorkspace({
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
+                                  disabled={!canViewVehicles}
+                                  onClick={() => setAssetsCustomer(customer)}
+                                  className="h-8 rounded-[3px] border border-[#9fc2f8] bg-[#f5f9ff] px-3 text-[10px] font-semibold text-[#357cf4] disabled:border-[#dfe6ef] disabled:bg-[#f4f6f9] disabled:text-[#9aacbf]"
+                                >
+                                  Assets
+                                </button>
+
+                                <button
+                                  type="button"
                                   onClick={() => setMembersCustomer(customer)}
                                   className="h-8 rounded-[3px] border border-[#cfd8e7] px-3 text-[10px] font-semibold text-[#52698e]"
                                 >
@@ -1102,6 +1143,17 @@ export function AccountManagementWorkspace({
             setManagerDealerId(null);
           }}
           onCreated={managerCreated}
+        />
+      ) : null}
+
+      {assetsCustomer ? (
+        <CustomerAssetsModal
+          customer={assetsCustomer}
+          canCreateVehicles={canCreateVehicles}
+          canViewDevices={canViewDevices}
+          canInstallDevices={canInstallDevices}
+          onClose={() => setAssetsCustomer(null)}
+          onVehicleCountChange={customerVehicleCountChanged}
         />
       ) : null}
 

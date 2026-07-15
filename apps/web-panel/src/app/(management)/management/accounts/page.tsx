@@ -23,6 +23,10 @@ export default async function ManagementAccountsPage() {
       canManageDealerStaff={permissions.has("dealer.staff.manage")}
       canManageCustomerMembers={permissions.has("customer.update")}
       canChooseCustomerAssignment={platformWorkspace}
+      canViewVehicles={permissions.has("vehicle.view")}
+      canCreateVehicles={permissions.has("vehicle.create")}
+      canViewDevices={permissions.has("device.view")}
+      canInstallDevices={permissions.has("device.install")}
     />
   );
 }
