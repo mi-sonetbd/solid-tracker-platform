@@ -82,14 +82,28 @@ function Resolve-SolidTrackerPackageScript {
 }
 
 function Test-SolidTrackerProcess {
-    param([Nullable[int]]$ProcessId)
+    param([AllowNull()][object]$ProcessId)
 
     if ($null -eq $ProcessId) {
         return $false
     }
 
+    $normalizedProcessId = 0
+
+    if (
+        -not [int]::TryParse(
+            [string]$ProcessId,
+            [ref]$normalizedProcessId
+        ) -or
+        $normalizedProcessId -le 0
+    ) {
+        return $false
+    }
+
     return $null -ne (
-        Get-Process -Id $ProcessId.Value -ErrorAction SilentlyContinue
+        Get-Process `
+            -Id $normalizedProcessId `
+            -ErrorAction SilentlyContinue
     )
 }
 
