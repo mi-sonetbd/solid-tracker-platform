@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Building2,
   CheckCircle2,
@@ -278,19 +279,24 @@ export function AccountManagementWorkspace({
                 Add a Customer, login membership, and Dealer assignment in the next operation stage.
               </p>
 
-              <button
-                type="button"
-                disabled
-                title={
-                  canCreateCustomer
-                    ? "Customer onboarding is the next stage."
-                    : "This workspace cannot create Customers."
-                }
-                className="mt-4 flex h-9 items-center gap-2 rounded-[3px] bg-[#b8c7dc] px-4 text-[11px] font-semibold text-white"
-              >
-                <CirclePlus className="h-4 w-4" />
-                Add Customer
-              </button>
+              {canCreateCustomer ? (
+                <Link
+                  href="/management/customers"
+                  className="mt-4 flex h-9 w-fit items-center gap-2 rounded-[3px] bg-[#357cf4] px-4 text-[11px] font-semibold text-white"
+                >
+                  <CirclePlus className="h-4 w-4" />
+                  Manage Direct Customers
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="mt-4 flex h-9 items-center gap-2 rounded-[3px] bg-[#b8c7dc] px-4 text-[11px] font-semibold text-white"
+                >
+                  <CirclePlus className="h-4 w-4" />
+                  Add Customer
+                </button>
+              )}
             </article>
 
             <article className="rounded-[6px] border border-[#dfe6ef] p-5">
