@@ -1143,6 +1143,7 @@ The navigation configuration contains role metadata, but route enforcement will 
 
     Write-Section "4. Install and Verify Frontend"
 
+
     Invoke-Native "pnpm.cmd" @("install")
 
     Invoke-Native "pnpm.cmd" @(
