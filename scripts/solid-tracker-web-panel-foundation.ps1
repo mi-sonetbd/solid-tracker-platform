@@ -4,12 +4,52 @@ param()
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$ScriptName = "Solid Tracker - Frontend Web Panel Foundation"
+$ScriptName = "Solid Tracker - Frontend Web Panel Foundation v5"
 $ExpectedBranch = "feat/web-panel-foundation"
 $WebAppRelativePath = "apps/web-panel"
 $WebPackageName = "@solid-tracker/web-panel"
+$CanonicalScriptRelativePath = "scripts/solid-tracker-web-panel-foundation.ps1"
+$BackendScriptRelativePath = "scripts/solid-tracker-backend-main-integration.ps1"
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$RepoRoot = (Get-Location).Path
+$ResolvedScriptPath = (Resolve-Path -LiteralPath $PSCommandPath).Path
+$ScriptsDirectory = Join-Path $RepoRoot "scripts"
+$CanonicalScriptPath = Join-Path $RepoRoot $CanonicalScriptRelativePath
+$CurrentScriptDirectory = Split-Path -Parent $ResolvedScriptPath
+$CurrentScriptName = Split-Path -Leaf $ResolvedScriptPath
+
+if (-not (Test-Path (Join-Path $RepoRoot ".git"))) {
+    throw "Run this script while the current directory is the Solid Tracker repository root."
+}
+
+$isVersionedScriptInsideRepository = (
+    [string]::Equals(
+        $CurrentScriptDirectory,
+        $ScriptsDirectory,
+        [System.StringComparison]::OrdinalIgnoreCase
+    ) -and
+    ($CurrentScriptName -match "^solid-tracker-web-panel-foundation-v[0-9]+[.]ps1$")
+)
+
+if ($isVersionedScriptInsideRepository) {
+    throw "Keep the v5 repair script outside the repository, then run it while PowerShell is located at the repository root."
+}
+
+if (-not [string]::Equals(
+    $ResolvedScriptPath,
+    $CanonicalScriptPath,
+    [System.StringComparison]::OrdinalIgnoreCase
+)) {
+    Copy-Item -LiteralPath $ResolvedScriptPath -Destination $CanonicalScriptPath -Force
+}
+
+Get-ChildItem `
+    -Path $ScriptsDirectory `
+    -Filter "solid-tracker-web-panel-foundation-v*.ps1" `
+    -File `
+    -ErrorAction SilentlyContinue |
+    Remove-Item -Force
+
 $LogDirectory = Join-Path $env:LOCALAPPDATA "SolidTrackerLogs"
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $LogFile = Join-Path $LogDirectory "web-panel-foundation-$Timestamp.log"
@@ -39,7 +79,7 @@ function Invoke-Native {
     )
 
     $displayCommand = $FilePath
-    if ($Arguments.Count -gt 0) {
+    if ($Arguments.Length -gt 0) {
         $displayCommand += " " + ($Arguments -join " ")
     }
 
@@ -69,36 +109,42 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllText($FullPath, $Content, $Utf8WithoutBom)
 }
 
-function Get-GitStatusLines {
-    $lines = @(git status --porcelain)
+function Get-GitStatusSnapshot {
+    [string[]]$lines = @(& git status --porcelain)
+
     if ($LASTEXITCODE -ne 0) {
         throw "Could not read Git repository status."
     }
 
-    return $lines
+    return [PSCustomObject]@{
+        Lines   = $lines
+        IsClean = ($lines.Length -eq 0)
+        Text    = ($lines -join [Environment]::NewLine)
+    }
 }
 
 function Assert-OnlyWorkflowScriptsChanged {
     $allowedPaths = @(
-        "scripts/solid-tracker-backend-main-integration.ps1",
-        "scripts/solid-tracker-web-panel-foundation.ps1"
+        $BackendScriptRelativePath,
+        $CanonicalScriptRelativePath
     )
 
     $unexpected = @()
+    $status = Get-GitStatusSnapshot
 
-    foreach ($line in (Get-GitStatusLines)) {
+    foreach ($line in $status.Lines) {
         if ([string]::IsNullOrWhiteSpace($line)) {
             continue
         }
 
-        $path = $line.Substring(3).Trim()
+        $path = ($line.Substring(3).Trim() -replace "\\", "/")
 
         if ($path -notin $allowedPaths) {
             $unexpected += $line
         }
     }
 
-    if ($unexpected.Count -gt 0) {
+    if (@($unexpected).Length -gt 0) {
         Write-Host "Unexpected repository changes were found:" -ForegroundColor Yellow
         $unexpected | ForEach-Object {
             Write-Host $_ -ForegroundColor Yellow
@@ -110,8 +156,8 @@ function Assert-OnlyWorkflowScriptsChanged {
 
 function Commit-WorkflowScripts {
     $scriptPaths = @(
-        "scripts/solid-tracker-backend-main-integration.ps1",
-        "scripts/solid-tracker-web-panel-foundation.ps1"
+        $BackendScriptRelativePath,
+        $CanonicalScriptRelativePath
     )
 
     foreach ($relativePath in $scriptPaths) {
@@ -136,7 +182,7 @@ function Commit-WorkflowScripts {
     Invoke-Native "git" @(
         "commit",
         "-m",
-        "chore(scripts): add backend and web foundation workflows"
+        "chore(scripts): maintain web foundation workflow"
     )
 
     Write-Ok "Workflow scripts committed."
@@ -149,7 +195,7 @@ function Assert-NodeVersion {
         throw "Node.js is not available."
     }
 
-    $normalizedVersion = $rawNodeVersion.TrimStart("v").Split("-")[0]
+    $normalizedVersion = (($rawNodeVersion -replace "^v", "") -split "-")[0]
     $nodeVersion = [version]$normalizedVersion
     $minimumVersion = [version]"20.9.0"
 
@@ -239,7 +285,7 @@ try {
     Assert-OnlyWorkflowScriptsChanged
     Commit-WorkflowScripts
 
-    if ((Get-GitStatusLines).Count -ne 0) {
+    if (-not (Get-GitStatusSnapshot).IsClean) {
         throw "Repository must be clean before scaffolding the web panel."
     }
 
@@ -1141,7 +1187,7 @@ The navigation configuration contains role metadata, but route enforcement will 
         "feat(web): establish operations panel foundation"
     )
 
-    if ((Get-GitStatusLines).Count -ne 0) {
+    if (-not (Get-GitStatusSnapshot).IsClean) {
         throw "Repository is not clean after the frontend foundation commit."
     }
 
