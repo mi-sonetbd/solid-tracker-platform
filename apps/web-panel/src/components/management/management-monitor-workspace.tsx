@@ -11,7 +11,10 @@ import {
   SlidersHorizontal,
   Target,
 } from "lucide-react";
-import { useState } from "react";
+import {
+  useState,
+  type ReactNode,
+} from "react";
 import { AccountTree } from "@/components/management/account-tree";
 import { ManagedDeviceList } from "@/components/management/managed-device-list";
 import { ManagementRail } from "@/components/management/management-rail";
@@ -29,7 +32,7 @@ type CollapsiblePanelProps = {
   expandedWidth: string;
   collapsed: boolean;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onToggle: () => void;
 };
 
@@ -65,7 +68,9 @@ function CollapsiblePanel({
           aria-hidden="true"
           className={[
             "absolute inset-y-0 right-0 w-[14px] border-x border-[#cfd9e7] bg-[#e9eef5] transition-opacity duration-100",
-            collapsed ? "opacity-100" : "pointer-events-none opacity-0",
+            collapsed
+              ? "opacity-100"
+              : "pointer-events-none opacity-0",
           ].join(" ")}
         />
       </div>
@@ -75,7 +80,7 @@ function CollapsiblePanel({
         aria-label={label}
         title={label}
         onClick={onToggle}
-        className="absolute right-[-8px] top-1/2 z-[1100] grid h-[64px] w-[16px] -translate-y-1/2 place-items-center rounded-r-[4px] border border-l-0 border-[#314765] bg-[#263b5c] text-[#c6d2e4] shadow-[0_5px_12px_rgba(25,48,82,0.28)] transition-[background-color,transform] duration-100 hover:bg-[#1e304b] active:scale-95"
+        className="absolute left-full top-1/2 z-[1100] grid h-[64px] w-[16px] -translate-y-1/2 place-items-center rounded-r-[4px] border border-l-0 border-[#314765] bg-[#263b5c] text-[#c6d2e4] shadow-[0_5px_12px_rgba(25,48,82,0.28)] transition-[background-color,transform] duration-100 hover:bg-[#1e304b] active:scale-95"
       >
         <Icon className="h-4 w-4" strokeWidth={2.8} />
       </button>

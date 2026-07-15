@@ -13,22 +13,34 @@ function MapResizeController() {
 
   useEffect(() => {
     const container = map.getContainer();
-    let animationFrame = 0;
+    let disposed = false;
+    let animationFrame: number | null = null;
 
     function refreshMapSize() {
-      cancelAnimationFrame(animationFrame);
+      if (disposed) {
+        return;
+      }
+
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+      }
 
       animationFrame = requestAnimationFrame(() => {
-        if (!container.isConnected) {
+        animationFrame = null;
+
+        if (disposed || !container.isConnected) {
           return;
         }
 
-        map.stop();
-        map.invalidateSize({
-          animate: false,
-          pan: false,
-          debounceMoveend: true,
-        });
+        try {
+          map.invalidateSize({
+            animate: false,
+            pan: false,
+            debounceMoveend: true,
+          });
+        } catch {
+          return;
+        }
       });
     }
 
@@ -39,13 +51,20 @@ function MapResizeController() {
 
     observer?.observe(container);
     window.addEventListener("resize", refreshMapSize);
-    refreshMapSize();
+    map.whenReady(refreshMapSize);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
+      disposed = true;
+
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+      }
+
       observer?.disconnect();
       window.removeEventListener("resize", refreshMapSize);
-      map.stop();
+
+      // React Leaflet owns Map removal. Do not call map.stop() or
+      // map.remove() here because the map pane may already be gone.
     };
   }, [map]);
 
