@@ -65,7 +65,7 @@ function formatDate(value?: string | null) {
 }
 
 function custodyLabel(device: DeviceSummary) {
-  const allocation = device.dealerAllocations[0];
+  const allocation = device.dealerAllocations?.[0];
 
   if (allocation) {
     return allocation.dealerOrganization.name;
@@ -76,6 +76,16 @@ function custodyLabel(device: DeviceSummary) {
   }
 
   return "Solid Tracker Platform";
+}
+
+function normalizeDevice(device: DeviceSummary): DeviceSummary {
+  return {
+    ...device,
+    dealerAllocations: device.dealerAllocations ?? [],
+    vehicleAssignments: device.vehicleAssignments ?? [],
+    ownershipHistory: device.ownershipHistory ?? [],
+    custodyHistory: device.custodyHistory ?? [],
+  };
 }
 
 function statusClass(status: string) {
@@ -162,7 +172,7 @@ export function DeviceManagementWorkspace({
         return payload as DeviceListResponse;
       })
       .then((payload) => {
-        setDevices(payload.items);
+        setDevices(payload.items.map(normalizeDevice));
         setError("");
       })
       .catch((requestError: unknown) => {
@@ -247,7 +257,7 @@ export function DeviceManagementWorkspace({
         (device) =>
           ["RECEIVED", "IN_STOCK"].includes(
             device.lifecycleStatus,
-          ) && device.dealerAllocations.length === 0,
+          ) && (device.dealerAllocations?.length ?? 0) === 0,
       ).length,
       dealerStock: devices.filter(
         (device) => device.lifecycleStatus === "ALLOCATED",
@@ -285,8 +295,10 @@ export function DeviceManagementWorkspace({
 
   function deviceCreated(device: DeviceSummary) {
     setStockModalOpen(false);
+    const normalizedDevice = normalizeDevice(device);
+
     setDevices((current) => [
-      device,
+      normalizedDevice,
       ...current.filter((item) => item.id !== device.id),
     ]);
     setSuccess(
@@ -537,9 +549,9 @@ export function DeviceManagementWorkspace({
                     <tbody>
                       {devices.map((device) => {
                         const allocation =
-                          device.dealerAllocations[0] ?? null;
+                          device.dealerAllocations?.[0] ?? null;
                         const installed =
-                          device.vehicleAssignments.length > 0 ||
+                          (device.vehicleAssignments?.length ?? 0) > 0 ||
                           device.lifecycleStatus === "INSTALLED";
                         const allocatable =
                           canAllocateDevices &&

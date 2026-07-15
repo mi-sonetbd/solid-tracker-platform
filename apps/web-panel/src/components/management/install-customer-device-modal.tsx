@@ -117,7 +117,7 @@ export function InstallCustomerDeviceModal({
       })
       .then((payload) => {
         const available = payload.items.filter(
-          (device) => device.vehicleAssignments.length === 0,
+          (device) => (device.vehicleAssignments?.length ?? 0) === 0,
         );
         setDevices(available);
         setSelectedDeviceId((current) =>
@@ -351,7 +351,7 @@ export function InstallCustomerDeviceModal({
                 <p className="font-semibold text-[#344b72]">Stock scope</p>
                 <p className="mt-1">
                   {customer.managingDealerId
-                    ? selectedDevice.dealerAllocations[0]
+                    ? selectedDevice.dealerAllocations?.[0]
                         ?.dealerOrganization.name ?? "Selected Dealer"
                     : "Solid Tracker Platform"}
                 </p>

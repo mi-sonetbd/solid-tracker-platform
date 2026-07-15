@@ -133,8 +133,8 @@ export type DeviceSummary = {
   createdAt: string;
   updatedAt?: string;
   deviceModel: DeviceModelSummary;
-  dealerAllocations: DealerDeviceAllocationSummary[];
-  vehicleAssignments: Array<{
+  dealerAllocations?: DealerDeviceAllocationSummary[];
+  vehicleAssignments?: Array<{
     id: string;
     status: string;
     vehicleId: string;
