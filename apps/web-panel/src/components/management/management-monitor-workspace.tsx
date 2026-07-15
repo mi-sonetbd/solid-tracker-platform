@@ -12,13 +12,21 @@ import {
   Target,
 } from "lucide-react";
 import {
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { AccountTree } from "@/components/management/account-tree";
+import { CustomerDevicePropertyDrawer } from "@/components/customer/customer-device-property-drawer";
 import { ManagedDeviceList } from "@/components/management/managed-device-list";
+import { ManagementMonitorAccountTree } from "@/components/management/management-monitor-account-tree";
 import { ManagementRail } from "@/components/management/management-rail";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
+import {
+  type ManagementMonitorScope,
+  type ManagementMonitorVehicle,
+} from "@/lib/management/monitor-types";
+import { useManagementMonitorAssets } from "@/lib/management/use-management-monitor-assets";
+import { useManagementMonitorHierarchy } from "@/lib/management/use-management-monitor-hierarchy";
 
 const mapTools = [
   Target,
@@ -27,6 +35,14 @@ const mapTools = [
   SlidersHorizontal,
   Map,
 ];
+
+type ManagementMonitorWorkspaceProps = {
+  workspace: string;
+  canViewDealers: boolean;
+  canViewCustomers: boolean;
+  canViewVehicles: boolean;
+  canViewLocation: boolean;
+};
 
 type CollapsiblePanelProps = {
   expandedWidth: string;
@@ -43,7 +59,9 @@ function CollapsiblePanel({
   children,
   onToggle,
 }: CollapsiblePanelProps) {
-  const Icon = collapsed ? ChevronRight : ChevronLeft;
+  const Icon = collapsed
+    ? ChevronRight
+    : ChevronLeft;
 
   return (
     <div
@@ -82,17 +100,97 @@ function CollapsiblePanel({
         onClick={onToggle}
         className="absolute left-full top-1/2 z-[1100] grid h-[64px] w-[16px] -translate-y-1/2 place-items-center rounded-r-[4px] border border-l-0 border-[#314765] bg-[#263b5c] text-[#c6d2e4] shadow-[0_5px_12px_rgba(25,48,82,0.28)] transition-[background-color,transform] duration-100 hover:bg-[#1e304b] active:scale-95"
       >
-        <Icon className="h-4 w-4" strokeWidth={2.8} />
+        <Icon
+          className="h-4 w-4"
+          strokeWidth={2.8}
+        />
       </button>
     </div>
   );
 }
 
-export function ManagementMonitorWorkspace() {
+export function ManagementMonitorWorkspace({
+  workspace,
+  canViewDealers,
+  canViewCustomers,
+  canViewVehicles,
+  canViewLocation,
+}: ManagementMonitorWorkspaceProps) {
+  const platformWorkspace =
+    workspace === "SUPER_ADMIN" ||
+    workspace === "ADMIN";
   const [accountPanelCollapsed, setAccountPanelCollapsed] =
     useState(false);
   const [devicePanelCollapsed, setDevicePanelCollapsed] =
     useState(false);
+  const [selectedScope, setSelectedScope] =
+    useState<ManagementMonitorScope>({
+      key: "platform",
+      type: "PLATFORM",
+      id: null,
+      label: platformWorkspace
+        ? "Solid Tracker"
+        : "Authenticated scope",
+    });
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<ManagementMonitorVehicle | null>(
+      null,
+    );
+  const [drawerOpen, setDrawerOpen] =
+    useState(false);
+
+  const hierarchy =
+    useManagementMonitorHierarchy({
+      canViewDealers,
+      canViewCustomers,
+    });
+  const assets = useManagementMonitorAssets({
+    scope: selectedScope,
+    customers: hierarchy.customers,
+    hierarchyLoading: hierarchy.loading,
+    canViewVehicles,
+  });
+
+  const selectedScopeLabel = useMemo(() => {
+    if (selectedScope.type !== "PLATFORM") {
+      return selectedScope.label;
+    }
+
+    if (platformWorkspace) {
+      return "Solid Tracker";
+    }
+
+    if (hierarchy.dealers.length === 1) {
+      return hierarchy.dealers[0].name;
+    }
+
+    return "Authenticated scope";
+  }, [
+    hierarchy.dealers,
+    platformWorkspace,
+    selectedScope,
+  ]);
+
+  function selectScope(
+    scope: ManagementMonitorScope,
+  ) {
+    setSelectedScope(scope);
+    setSelectedVehicle(null);
+    setDrawerOpen(false);
+    assets.prepareScopeChange();
+  }
+
+  function selectVehicle(
+    vehicle: ManagementMonitorVehicle,
+  ) {
+    setSelectedVehicle(vehicle);
+    setDrawerOpen(true);
+  }
+
+  function refreshHierarchy() {
+    hierarchy.refresh();
+    assets.prepareScopeChange();
+  }
 
   return (
     <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-w-[1180px] overflow-hidden">
@@ -107,12 +205,21 @@ export function ManagementMonitorWorkspace() {
             : "Collapse account list panel"
         }
         onToggle={() =>
-          setAccountPanelCollapsed((value) => !value)
+          setAccountPanelCollapsed(
+            (value) => !value,
+          )
         }
       >
-        <div className="h-full w-[300px]">
-          <AccountTree compact />
-        </div>
+        <ManagementMonitorAccountTree
+          workspace={workspace}
+          dealers={hierarchy.dealers}
+          customers={hierarchy.customers}
+          loading={hierarchy.loading}
+          error={hierarchy.error}
+          selectedScope={selectedScope}
+          onSelectScope={selectScope}
+          onRefresh={refreshHierarchy}
+        />
       </CollapsiblePanel>
 
       <CollapsiblePanel
@@ -124,16 +231,31 @@ export function ManagementMonitorWorkspace() {
             : "Collapse device list panel"
         }
         onToggle={() =>
-          setDevicePanelCollapsed((value) => !value)
+          setDevicePanelCollapsed(
+            (value) => !value,
+          )
         }
       >
-        <div className="h-full w-[455px]">
-          <ManagedDeviceList />
-        </div>
+        <ManagedDeviceList
+          scopeLabel={selectedScopeLabel}
+          vehicles={assets.vehicles}
+          loading={
+            assets.loading ||
+            hierarchy.loading
+          }
+          error={
+            hierarchy.error || assets.error
+          }
+          selectedVehicleId={
+            selectedVehicle?.id ?? null
+          }
+          onSelectVehicle={selectVehicle}
+          onRefresh={assets.refresh}
+        />
       </CollapsiblePanel>
 
       <section className="relative min-w-0 flex-1 overflow-hidden">
-        <TrackingMapClient />
+        <TrackingMapClient selectedPosition={null} />
 
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2">
           <label className="flex h-8 w-[255px] items-center rounded-[3px] bg-white px-3 shadow-sm">
@@ -160,7 +282,9 @@ export function ManagementMonitorWorkspace() {
               type="button"
               className={[
                 "grid h-8 w-8 place-items-center rounded-[3px] bg-white text-[#405779] shadow-sm",
-                index === 2 ? "bg-[#357cf4] text-white" : "",
+                index === 2
+                  ? "bg-[#357cf4] text-white"
+                  : "",
               ].join(" ")}
             >
               <Icon className="h-4 w-4" />
@@ -173,6 +297,23 @@ export function ManagementMonitorWorkspace() {
           <option>10s</option>
           <option>20s</option>
         </select>
+
+        {selectedVehicle && drawerOpen ? (
+          <CustomerDevicePropertyDrawer
+            vehicle={selectedVehicle}
+            onClose={() => setDrawerOpen(false)}
+          />
+        ) : null}
+
+        {selectedVehicle &&
+        drawerOpen &&
+        canViewLocation ? (
+          <div className="pointer-events-none absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2 rounded-[4px] bg-[#405779]/90 px-4 py-2 text-[10px] font-medium text-white shadow-lg">
+            No real Traccar position exists yet. Map
+            focus activates automatically when a
+            scoped position becomes available.
+          </div>
+        ) : null}
       </section>
     </div>
   );
