@@ -1,41 +1,57 @@
 "use client";
 
 import {
-  Boxes,
-  Building2,
-  CheckCircle2,
   CirclePlus,
   Cpu,
+  FilePenLine,
+  FileSpreadsheet,
   LoaderCircle,
-  PackageCheck,
+  MoveRight,
+  PackagePlus,
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
+  Unlink,
 } from "lucide-react";
 import {
   useEffect,
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
-import { AccountTree } from "@/components/management/account-tree";
 import { AddDeviceModelModal } from "@/components/management/add-device-model-modal";
-import { AllocateDeviceModal } from "@/components/management/allocate-device-modal";
+import { BulkDeviceStockIntakeModal } from "@/components/management/bulk-device-stock-intake-modal";
+import { DeviceSellMoveModal } from "@/components/management/device-sell-move-modal";
 import { DeviceStockIntakeModal } from "@/components/management/device-stock-intake-modal";
+import { ManagementMonitorAccountTree } from "@/components/management/management-monitor-account-tree";
 import type {
-  DealerDeviceAllocationResult,
+  BulkDeviceRegistrationResult,
   DeviceListResponse,
   DeviceModelListResponse,
   DeviceModelSummary,
   DeviceSummary,
+  TransferDevicesResult,
 } from "@/lib/management/asset-types";
-import type { ManagementApiError } from "@/lib/management/dealer-types";
+import type { CustomerSummary } from "@/lib/management/customer-types";
+import type {
+  DealerSummary,
+  ManagementApiError,
+} from "@/lib/management/dealer-types";
+import {
+  customerDisplayName,
+  type ManagementMonitorScope,
+} from "@/lib/management/monitor-types";
+import { useManagementMonitorHierarchy } from "@/lib/management/use-management-monitor-hierarchy";
 
 type DeviceManagementWorkspaceProps = {
   workspace: string;
   canViewDevices: boolean;
+  canViewDealers: boolean;
+  canViewCustomers: boolean;
   canRegisterDevices: boolean;
-  canAllocateDevices: boolean;
+  canTransferDevices: boolean;
 };
 
 const lifecycleOptions = [
@@ -51,6 +67,16 @@ const lifecycleOptions = [
   "RETIRED",
 ];
 
+function normalizeDevice(device: DeviceSummary): DeviceSummary {
+  return {
+    ...device,
+    dealerAllocations: device.dealerAllocations ?? [],
+    vehicleAssignments: device.vehicleAssignments ?? [],
+    ownershipHistory: device.ownershipHistory ?? [],
+    custodyHistory: device.custodyHistory ?? [],
+  };
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "-";
 
@@ -62,30 +88,6 @@ function formatDate(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-function custodyLabel(device: DeviceSummary) {
-  const allocation = device.dealerAllocations?.[0];
-
-  if (allocation) {
-    return allocation.dealerOrganization.name;
-  }
-
-  if (device.lifecycleStatus === "INSTALLED") {
-    return "Customer vehicle";
-  }
-
-  return "Solid Tracker Platform";
-}
-
-function normalizeDevice(device: DeviceSummary): DeviceSummary {
-  return {
-    ...device,
-    dealerAllocations: device.dealerAllocations ?? [],
-    vehicleAssignments: device.vehicleAssignments ?? [],
-    ownershipHistory: device.ownershipHistory ?? [],
-    custodyHistory: device.custodyHistory ?? [],
-  };
 }
 
 function statusClass(status: string) {
@@ -112,102 +114,117 @@ function statusClass(status: string) {
   return "bg-amber-50 text-amber-700";
 }
 
+function accountLabel(
+  device: DeviceSummary,
+  dealers: DealerSummary[],
+  customers: CustomerSummary[],
+) {
+  const customerId =
+    device.vehicleAssignments?.[0]?.vehicle?.customerId ??
+    device.ownershipHistory?.[0]?.ownerCustomerId ??
+    device.custodyHistory?.[0]?.custodianCustomerId ??
+    null;
+
+  if (customerId) {
+    const customer = customers.find(
+      (item) => item.id === customerId,
+    );
+
+    if (customer) {
+      return customerDisplayName(customer);
+    }
+  }
+
+  const dealerId =
+    device.dealerAllocations?.[0]?.dealerOrganizationId ??
+    device.ownershipHistory?.[0]?.ownerOrganizationId ??
+    device.custodyHistory?.[0]?.custodianOrganizationId ??
+    null;
+
+  if (dealerId) {
+    const dealer = dealers.find(
+      (item) => item.id === dealerId,
+    );
+
+    if (dealer) return dealer.name;
+  }
+
+  return "Solid Tracker Platform";
+}
+
+function ActionButton({
+  icon,
+  label,
+  onClick,
+  disabled = false,
+  title,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex h-8 items-center gap-1.5 rounded-[3px] border border-[#cfd8e7] bg-white px-3 text-[10px] font-semibold text-[#52698e] shadow-sm hover:border-[#9fb7dc] disabled:cursor-not-allowed disabled:bg-[#f2f5f9] disabled:text-[#a4afc0]"
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 export function DeviceManagementWorkspace({
   workspace,
   canViewDevices,
+  canViewDealers,
+  canViewCustomers,
   canRegisterDevices,
-  canAllocateDevices,
+  canTransferDevices,
 }: DeviceManagementWorkspaceProps) {
+  const [selectedScope, setSelectedScope] =
+    useState<ManagementMonitorScope>({
+      key: "platform",
+      type: "PLATFORM",
+      id: null,
+      label: "Visible Inventory",
+    });
   const [devices, setDevices] = useState<DeviceSummary[]>([]);
   const [models, setModels] = useState<DeviceModelSummary[]>([]);
   const [loading, setLoading] = useState(canViewDevices);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [imeiInput, setImeiInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [lifecycleStatus, setLifecycleStatus] = useState("");
   const [deviceModelId, setDeviceModelId] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [modelRefreshVersion, setModelRefreshVersion] =
     useState(0);
+  const [selectedIds, setSelectedIds] =
+    useState<Set<string>>(new Set());
   const [modelModalOpen, setModelModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
-  const [allocationDevice, setAllocationDevice] =
-    useState<DeviceSummary | null>(null);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] =
+    useState(false);
+
+  const hierarchy = useManagementMonitorHierarchy({
+    canViewDealers,
+    canViewCustomers,
+  });
 
   useEffect(() => {
-    if (!canViewDevices) return;
-
-    const controller = new AbortController();
-    const parameters = new URLSearchParams({
-      page: "1",
-      pageSize: "100",
-    });
-
-    if (activeSearch) parameters.set("search", activeSearch);
-    if (lifecycleStatus) {
-      parameters.set("lifecycleStatus", lifecycleStatus);
-    }
-    if (deviceModelId) {
-      parameters.set("deviceModelId", deviceModelId);
-    }
-
-    fetch(`/api/management/devices?${parameters.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as
-          | DeviceListResponse
-          | ManagementApiError;
-
-        if (!response.ok) {
-          throw new Error(
-            "message" in payload
-              ? payload.message
-              : "Device inventory loading failed.",
-          );
-        }
-
-        return payload as DeviceListResponse;
-      })
-      .then((payload) => {
-        setDevices(payload.items.map(normalizeDevice));
-        setError("");
-      })
-      .catch((requestError: unknown) => {
-        if (
-          requestError instanceof DOMException &&
-          requestError.name === "AbortError"
-        ) {
-          return;
-        }
-
-        setDevices([]);
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Device inventory loading failed.",
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [
-    activeSearch,
-    canViewDevices,
-    deviceModelId,
-    lifecycleStatus,
-    refreshVersion,
-  ]);
-
-  useEffect(() => {
-    if (!canViewDevices) return;
-
     const controller = new AbortController();
 
     fetch("/api/management/device-models?page=1&pageSize=100", {
@@ -227,15 +244,15 @@ export function DeviceManagementWorkspace({
           );
         }
 
-        return payload as DeviceModelListResponse;
-      })
-      .then((payload) => {
-        setModels(payload.items);
+        setModels(
+          (payload as DeviceModelListResponse).items,
+        );
       })
       .catch((requestError: unknown) => {
         if (
-          requestError instanceof DOMException &&
-          requestError.name === "AbortError"
+          controller.signal.aborted ||
+          (requestError instanceof DOMException &&
+            requestError.name === "AbortError")
         ) {
           return;
         }
@@ -248,431 +265,593 @@ export function DeviceManagementWorkspace({
       });
 
     return () => controller.abort();
-  }, [canViewDevices, modelRefreshVersion]);
+  }, [modelRefreshVersion]);
 
-  const statistics = useMemo(
-    () => ({
-      total: devices.length,
-      platformStock: devices.filter(
-        (device) =>
-          ["RECEIVED", "IN_STOCK"].includes(
-            device.lifecycleStatus,
-          ) && (device.dealerAllocations?.length ?? 0) === 0,
-      ).length,
-      dealerStock: devices.filter(
-        (device) => device.lifecycleStatus === "ALLOCATED",
-      ).length,
-      installed: devices.filter(
-        (device) => device.lifecycleStatus === "INSTALLED",
-      ).length,
-    }),
-    [devices],
+  useEffect(() => {
+    if (!canViewDevices) return;
+
+    const controller = new AbortController();
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+
+    if (activeSearch) {
+      parameters.set("search", activeSearch);
+    }
+    if (lifecycleStatus) {
+      parameters.set("lifecycleStatus", lifecycleStatus);
+    }
+    if (deviceModelId) {
+      parameters.set("deviceModelId", deviceModelId);
+    }
+
+    if (
+      selectedScope.type === "DEALER" &&
+      selectedScope.id
+    ) {
+      parameters.set(
+        "dealerOrganizationId",
+        selectedScope.id,
+      );
+    } else if (
+      selectedScope.type === "CUSTOMER" &&
+      selectedScope.id
+    ) {
+      parameters.set("customerId", selectedScope.id);
+    } else if (selectedScope.type === "DIRECT") {
+      parameters.set("directCustomers", "true");
+    }
+
+    fetch(`/api/management/devices?${parameters.toString()}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as
+          | DeviceListResponse
+          | ManagementApiError;
+
+        if (!response.ok) {
+          throw new Error(
+            "message" in payload
+              ? payload.message
+              : "Scoped Device loading failed.",
+          );
+        }
+
+        const result = payload as DeviceListResponse;
+
+        setDevices(result.items.map(normalizeDevice));
+        setTotal(result.total);
+        setTotalPages(Math.max(result.totalPages, 1));
+        setSelectedIds(new Set());
+        setError("");
+      })
+      .catch((requestError: unknown) => {
+        if (
+          controller.signal.aborted ||
+          (requestError instanceof DOMException &&
+            requestError.name === "AbortError")
+        ) {
+          return;
+        }
+
+        setDevices([]);
+        setTotal(0);
+        setTotalPages(1);
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Scoped Device loading failed.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [
+    activeSearch,
+    canViewDevices,
+    deviceModelId,
+    lifecycleStatus,
+    page,
+    pageSize,
+    refreshVersion,
+    selectedScope,
+  ]);
+
+  const selectedDevices = useMemo(
+    () =>
+      devices.filter((device) =>
+        selectedIds.has(device.id),
+      ),
+    [devices, selectedIds],
   );
+
+  const transferBlocked = selectedDevices.some(
+    (device) =>
+      (device.vehicleAssignments?.length ?? 0) > 0 ||
+      !["RECEIVED", "IN_STOCK", "ALLOCATED"].includes(
+        device.lifecycleStatus,
+      ),
+  );
+
+  const allSelected =
+    devices.length > 0 &&
+    devices.every((device) => selectedIds.has(device.id));
+
+  function prepareReload() {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+  }
+
+  function reloadDevices() {
+    prepareReload();
+    setRefreshVersion((current) => current + 1);
+  }
+
+  function selectScope(scope: ManagementMonitorScope) {
+    prepareReload();
+    setSelectedScope(scope);
+    setPage(1);
+  }
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
-    setActiveSearch(searchInput.trim());
+    prepareReload();
+    setActiveSearch(
+      imeiInput.trim() || nameInput.trim(),
+    );
+    setPage(1);
   }
 
-  function refresh() {
-    setLoading(true);
-    setRefreshVersion((value) => value + 1);
-    setModelRefreshVersion((value) => value + 1);
+  function resetFilters() {
+    prepareReload();
+    setImeiInput("");
+    setNameInput("");
+    setActiveSearch("");
+    setLifecycleStatus("");
+    setDeviceModelId("");
+    setPage(1);
+  }
+
+  function toggleAll() {
+    setSelectedIds(() => {
+      if (allSelected) return new Set();
+
+      return new Set(devices.map((device) => device.id));
+    });
+  }
+
+  function toggleDevice(deviceId: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(deviceId)) {
+        next.delete(deviceId);
+      } else {
+        next.add(deviceId);
+      }
+
+      return next;
+    });
   }
 
   function modelCreated(model: DeviceModelSummary) {
+    setModels((current) => [model, ...current]);
     setModelModalOpen(false);
-    setModels((current) => [
-      model,
-      ...current.filter((item) => item.id !== model.id),
-    ]);
     setSuccess(
-      `Device Model ${model.manufacturer} ${model.modelName} was created.`,
+      `Device Model ${model.manufacturer} ${model.modelName} created.`,
     );
-    setModelRefreshVersion((value) => value + 1);
   }
 
   function deviceCreated(device: DeviceSummary) {
     setStockModalOpen(false);
-    const normalizedDevice = normalizeDevice(device);
-
-    setDevices((current) => [
-      normalizedDevice,
-      ...current.filter((item) => item.id !== device.id),
-    ]);
     setSuccess(
-      `${device.deviceCode} entered Platform stock with lifecycle IN_STOCK.`,
+      `Device ${device.deviceCode} received into Platform stock.`,
     );
-    setRefreshVersion((value) => value + 1);
+    setModelRefreshVersion((current) => current + 1);
+    reloadDevices();
   }
 
-  function deviceAllocated(
-    allocation: DealerDeviceAllocationResult,
+  function bulkCompleted(
+    result: BulkDeviceRegistrationResult,
   ) {
-    setAllocationDevice(null);
     setSuccess(
-      `${allocation.device.deviceCode} was allocated to ${allocation.dealerOrganization.name}.`,
+      `Bulk intake completed: ${result.created} created, ${result.failed} rejected.`,
     );
-    setLoading(true);
-    setRefreshVersion((value) => value + 1);
+    setModelRefreshVersion((current) => current + 1);
+    reloadDevices();
+  }
+
+  function transferCompleted(
+    result: TransferDevicesResult,
+  ) {
+    setTransferModalOpen(false);
+    setSuccess(
+      `${result.total} Device(s) moved to the selected ${result.targetType.toLowerCase()}.`,
+    );
+    hierarchy.refresh();
+    reloadDevices();
+  }
+
+  if (!canViewDevices) {
+    return (
+      <div className="grid min-h-[calc(100vh-var(--st-topbar-height))] place-items-center bg-[#f1f4f8] p-6">
+        <section className="max-w-lg rounded-[6px] border border-[#dfe6ef] bg-white p-8 text-center">
+          <ShieldCheck className="mx-auto h-10 w-10 text-[#357cf4]" />
+          <h1 className="mt-4 text-[18px] font-semibold text-[#2b4065]">
+            Device access is restricted
+          </h1>
+          <p className="mt-2 text-[11px] leading-6 text-[#71819c]">
+            This authenticated account does not have device.view permission.
+          </p>
+        </section>
+      </div>
+    );
   }
 
   return (
     <>
-      <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-w-[1180px] overflow-hidden p-2">
-        <AccountTree />
+      <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-h-[640px] overflow-hidden bg-[#f1f4f8]">
+        <ManagementMonitorAccountTree
+          workspace={workspace}
+          dealers={hierarchy.dealers}
+          customers={hierarchy.customers}
+          loading={hierarchy.loading}
+          error={hierarchy.error}
+          selectedScope={selectedScope}
+          onSelectScope={selectScope}
+          onRefresh={() => {
+            hierarchy.refresh();
+            reloadDevices();
+          }}
+        />
 
-        <section className="st-scrollbar min-w-0 flex-1 overflow-auto rounded-r-[6px] bg-[#eef2f7] p-4">
-          <div className="rounded-[8px] bg-white p-5 shadow-sm">
-            <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#e2e8f1] pb-4">
-              <div>
-                <div className="flex items-center gap-2 text-[#357cf4]">
-                  <Boxes className="h-5 w-5" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em]">
-                    Asset Inventory
-                  </span>
-                </div>
-                <h1 className="mt-2 text-[19px] font-semibold text-[#344b72]">
+        <main className="st-scrollbar min-w-0 flex-1 overflow-auto p-3">
+          <section className="min-h-full rounded-[4px] border border-[#dfe6ef] bg-white">
+            <header className="flex flex-wrap items-center gap-2 border-b border-[#e2e8f1] px-4 py-3">
+              <div className="mr-auto">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8b9ab4]">
+                  {selectedScope.label}
+                </p>
+                <h1 className="mt-1 text-[14px] font-semibold text-[#344b72]">
                   Device Management
                 </h1>
-                <p className="mt-1 text-[11px] text-[#71819c]">
-                  Device Models, Platform stock intake, Dealer
-                  allocation, and installed tracker visibility.
-                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="mr-2 rounded-full bg-[#eaf2ff] px-3 py-1 text-[10px] font-semibold text-[#357cf4]">
-                  {workspace}
-                </span>
+              <ActionButton
+                icon={<PackagePlus className="h-3.5 w-3.5" />}
+                label="Import device"
+                onClick={() => setBulkModalOpen(true)}
+                disabled={!canRegisterDevices}
+                title={
+                  canRegisterDevices
+                    ? "Bulk import one Device Model with multiple IMEIs"
+                    : "Platform device.register permission is required"
+                }
+              />
+              <ActionButton
+                icon={<FilePenLine className="h-3.5 w-3.5" />}
+                label="Edit device"
+                disabled
+                title="Controlled metadata editing will be connected in a later workflow"
+              />
+              <ActionButton
+                icon={<MoveRight className="h-3.5 w-3.5" />}
+                label="Sell/move"
+                onClick={() => setTransferModalOpen(true)}
+                disabled={
+                  !canTransferDevices ||
+                  selectedDevices.length === 0 ||
+                  transferBlocked
+                }
+                title={
+                  transferBlocked
+                    ? "Installed or lifecycle-blocked Devices cannot be moved"
+                    : "Move selected Devices to a scoped Dealer or Customer"
+                }
+              />
+              <ActionButton
+                icon={<FileSpreadsheet className="h-3.5 w-3.5" />}
+                label="Expire/Edit due"
+                disabled
+                title="Subscription due-date editing is not part of this asset stage"
+              />
+              <ActionButton
+                icon={<FileSpreadsheet className="h-3.5 w-3.5" />}
+                label="Create/Edit invoice"
+                disabled
+                title="Invoice workflow remains in Billing"
+              />
+              <ActionButton
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                label="Delete device"
+                disabled
+                title="Physical Device history is retained; destructive delete is disabled"
+              />
+              <ActionButton
+                icon={<Unlink className="h-3.5 w-3.5" />}
+                label="Unbind"
+                disabled
+                title="Installed trackers must use the explicit removal workflow"
+              />
 
-                <button
-                  type="button"
-                  onClick={() => setModelModalOpen(true)}
-                  disabled={!canRegisterDevices}
-                  className="flex h-9 items-center gap-2 rounded-[4px] border border-[#357cf4] px-4 text-[11px] font-semibold text-[#357cf4] disabled:border-[#cfd8e7] disabled:text-[#9aacbf]"
-                >
-                  <Cpu className="h-4 w-4" />
-                  Add Device Model
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStockModalOpen(true)}
-                  disabled={!canRegisterDevices}
-                  className="flex h-9 items-center gap-2 rounded-[4px] bg-[#357cf4] px-4 text-[11px] font-semibold text-white disabled:bg-[#b8c7dc]"
-                >
-                  <CirclePlus className="h-4 w-4" />
-                  Add Device / Stock Intake
-                </button>
-              </div>
+              {canRegisterDevices ? (
+                <>
+                  <ActionButton
+                    icon={<Cpu className="h-3.5 w-3.5" />}
+                    label="Add Device Model"
+                    onClick={() => setModelModalOpen(true)}
+                  />
+                  <ActionButton
+                    icon={<CirclePlus className="h-3.5 w-3.5" />}
+                    label="Add Device / Stock Intake"
+                    onClick={() => setStockModalOpen(true)}
+                  />
+                </>
+              ) : null}
             </header>
 
-            {success ? (
-              <div className="mt-4 flex items-center gap-2 rounded-[4px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-medium text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                {success}
-              </div>
-            ) : null}
+            <form
+              onSubmit={search}
+              className="grid gap-3 border-b border-[#e2e8f1] bg-[#fbfcfe] p-4 md:grid-cols-2 xl:grid-cols-6"
+            >
+              <label className="text-[9px] font-semibold text-[#71819c]">
+                IMEI
+                <input
+                  value={imeiInput}
+                  onChange={(event) =>
+                    setImeiInput(event.target.value)
+                  }
+                  className="mt-1 h-9 w-full rounded-[3px] border border-[#cfd8e7] bg-white px-3 text-[10px] outline-none"
+                  placeholder="Search IMEI"
+                />
+              </label>
 
-            {error ? (
-              <div className="mt-4 rounded-[4px] border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-medium text-red-700">
-                {error}
-              </div>
-            ) : null}
+              <label className="text-[9px] font-semibold text-[#71819c]">
+                Device name / code
+                <input
+                  value={nameInput}
+                  onChange={(event) =>
+                    setNameInput(event.target.value)
+                  }
+                  className="mt-1 h-9 w-full rounded-[3px] border border-[#cfd8e7] bg-white px-3 text-[10px] outline-none"
+                  placeholder="Search Device"
+                />
+              </label>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-4">
-              {[
-                {
-                  label: "Visible inventory",
-                  value: statistics.total,
-                  icon: Boxes,
-                },
-                {
-                  label: "Platform stock",
-                  value: statistics.platformStock,
-                  icon: PackageCheck,
-                },
-                {
-                  label: "Dealer stock",
-                  value: statistics.dealerStock,
-                  icon: Building2,
-                },
-                {
-                  label: "Installed",
-                  value: statistics.installed,
-                  icon: ShieldCheck,
-                },
-              ].map((item) => (
-                <article
-                  key={item.label}
-                  className="rounded-[6px] border border-[#dfe6ef] p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8b9ab4]">
-                      {item.label}
-                    </p>
-                    <item.icon className="h-4 w-4 text-[#357cf4]" />
-                  </div>
-                  <p className="mt-2 text-[26px] font-semibold text-[#344b72]">
-                    {item.value}
-                  </p>
-                </article>
-              ))}
-            </div>
-
-            <section className="mt-5 overflow-hidden rounded-[6px] border border-[#dfe6ef]">
-              <header className="flex flex-wrap items-center gap-3 border-b border-[#e2e8f1] px-5 py-4">
-                <form
-                  onSubmit={search}
-                  className="flex min-w-[300px] flex-1"
-                >
-                  <div className="relative min-w-0 flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b9ab4]" />
-                    <input
-                      value={searchInput}
-                      onChange={(event) =>
-                        setSearchInput(event.target.value)
-                      }
-                      placeholder="Device code, IMEI, or serial number"
-                      className="h-9 w-full rounded-l-[4px] border border-[#cfd8e7] pl-10 pr-3 text-[11px] outline-none focus:border-[#357cf4]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="h-9 rounded-r-[4px] bg-[#52698e] px-4 text-[11px] font-semibold text-white"
-                  >
-                    Search
-                  </button>
-                </form>
-
+              <label className="text-[9px] font-semibold text-[#71819c]">
+                Device Model
                 <select
                   value={deviceModelId}
                   onChange={(event) => {
-                    setLoading(true);
+                    prepareReload();
                     setDeviceModelId(event.target.value);
+                    setPage(1);
                   }}
-                  className="h-9 min-w-[210px] rounded-[4px] border border-[#cfd8e7] bg-white px-3 text-[11px] text-[#52698e]"
+                  className="mt-1 h-9 w-full rounded-[3px] border border-[#cfd8e7] bg-white px-3 text-[10px] outline-none"
                 >
-                  <option value="">All Device Models</option>
+                  <option value="">All models</option>
                   {models.map((model) => (
                     <option key={model.id} value={model.id}>
                       {model.manufacturer} {model.modelName}
                     </option>
                   ))}
                 </select>
+              </label>
 
+              <label className="text-[9px] font-semibold text-[#71819c]">
+                Lifecycle
                 <select
                   value={lifecycleStatus}
                   onChange={(event) => {
-                    setLoading(true);
+                    prepareReload();
                     setLifecycleStatus(event.target.value);
+                    setPage(1);
                   }}
-                  className="h-9 min-w-[160px] rounded-[4px] border border-[#cfd8e7] bg-white px-3 text-[11px] text-[#52698e]"
+                  className="mt-1 h-9 w-full rounded-[3px] border border-[#cfd8e7] bg-white px-3 text-[10px] outline-none"
                 >
                   {lifecycleOptions.map((status) => (
                     <option key={status || "ALL"} value={status}>
                       {status
                         ? status.replaceAll("_", " ")
-                        : "All lifecycle states"}
+                        : "All statuses"}
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <button
+                type="submit"
+                className="mt-4 flex h-9 items-center justify-center gap-2 rounded-[3px] bg-[#357cf4] px-4 text-[10px] font-semibold text-white"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </button>
+
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-4 flex h-9 items-center justify-center gap-2 rounded-[3px] border border-[#cfd8e7] bg-white px-4 text-[10px] font-semibold text-[#52698e]"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reset
+              </button>
+            </form>
+
+            {success ? (
+              <p className="mx-4 mt-4 rounded-[4px] bg-emerald-50 px-4 py-3 text-[10px] font-medium text-emerald-700">
+                {success}
+              </p>
+            ) : null}
+
+            {error ? (
+              <p className="mx-4 mt-4 rounded-[4px] bg-red-50 px-4 py-3 text-[10px] font-medium text-red-700">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1160px] text-left text-[10px]">
+                <thead className="bg-[#f7f9fc] text-[9px] font-semibold uppercase tracking-[0.04em] text-[#71819c]">
+                  <tr>
+                    <th className="w-10 px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        aria-label="Select current Device page"
+                      />
+                    </th>
+                    <th className="px-3 py-3">No.</th>
+                    <th className="px-3 py-3">Account</th>
+                    <th className="px-3 py-3">Device name</th>
+                    <th className="px-3 py-3">IMEI</th>
+                    <th className="px-3 py-3">Device Model</th>
+                    <th className="px-3 py-3">Activated</th>
+                    <th className="px-3 py-3">Subscription</th>
+                    <th className="px-3 py-3">Expiration</th>
+                    <th className="px-3 py-3">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={10} className="py-20 text-center">
+                        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-[#357cf4]" />
+                        <p className="mt-3 text-[#71819c]">
+                          Loading scoped Devices
+                        </p>
+                      </td>
+                    </tr>
+                  ) : devices.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-20 text-center text-[#8b9ab4]">
+                        No Device exists in the selected hierarchy scope.
+                      </td>
+                    </tr>
+                  ) : (
+                    devices.map((device, index) => (
+                      <tr
+                        key={device.id}
+                        className="border-b border-[#edf1f6] text-[#52698e] hover:bg-[#fbfdff]"
+                      >
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(device.id)}
+                            onChange={() => toggleDevice(device.id)}
+                            aria-label={`Select ${device.deviceCode}`}
+                          />
+                        </td>
+                        <td className="px-3 py-3">
+                          {(page - 1) * pageSize + index + 1}
+                        </td>
+                        <td className="max-w-[190px] truncate px-3 py-3 font-medium text-[#344b72]">
+                          {accountLabel(
+                            device,
+                            hierarchy.dealers,
+                            hierarchy.customers,
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-[#357cf4]">
+                          {device.deviceCode}
+                        </td>
+                        <td className="px-3 py-3 font-mono">
+                          {device.imei || "-"}
+                        </td>
+                        <td className="px-3 py-3">
+                          {device.deviceModel.manufacturer}{" "}
+                          {device.deviceModel.modelName}
+                        </td>
+                        <td className="px-3 py-3">
+                          {formatDate(
+                            device.receivedAt ?? device.createdAt,
+                          )}
+                        </td>
+                        <td className="px-3 py-3">-</td>
+                        <td className="px-3 py-3">-</td>
+                        <td className="px-3 py-3">
+                          <span
+                            className={[
+                              "rounded-full px-2 py-1 text-[8px] font-semibold",
+                              statusClass(device.lifecycleStatus),
+                            ].join(" ")}
+                          >
+                            {device.lifecycleStatus.replaceAll("_", " ")}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e2e8f1] px-4 py-3 text-[10px] text-[#71819c]">
+              <span>
+                Selected {selectedDevices.length} Â· Showing{" "}
+                {devices.length} of {total} Device(s)
+              </span>
+
+              <div className="flex items-center gap-2">
+                <label>
+                  Page size{" "}
+                  <select
+                    value={pageSize}
+                    onChange={(event) => {
+                      prepareReload();
+                      setPageSize(Number(event.target.value));
+                      setPage(1);
+                    }}
+                    className="h-8 rounded-[3px] border border-[#cfd8e7] bg-white px-2"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
 
                 <button
                   type="button"
-                  onClick={refresh}
-                  disabled={loading}
-                  className="flex h-9 items-center gap-2 rounded-[4px] border border-[#cfd8e7] px-4 text-[11px] font-semibold text-[#52698e]"
+                  disabled={page <= 1 || loading}
+                  onClick={() => {
+                    prepareReload();
+                    setPage((current) => Math.max(1, current - 1));
+                  }}
+                  className="h-8 rounded-[3px] border border-[#cfd8e7] bg-white px-3 font-semibold disabled:opacity-40"
                 >
-                  <RefreshCw
-                    className={[
-                      "h-4 w-4",
-                      loading ? "animate-spin" : "",
-                    ].join(" ")}
-                  />
-                  Refresh
+                  Previous
                 </button>
-              </header>
 
-              {!canViewDevices ? (
-                <div className="p-12 text-center text-[12px] text-[#71819c]">
-                  This account does not have device.view permission.
-                </div>
-              ) : loading ? (
-                <div className="flex min-h-[300px] items-center justify-center gap-2 text-[12px] text-[#71819c]">
-                  <LoaderCircle className="h-5 w-5 animate-spin text-[#357cf4]" />
-                  Loading scoped device inventory
-                </div>
-              ) : devices.length === 0 ? (
-                <div className="grid min-h-[300px] place-items-center text-center">
-                  <div>
-                    <Boxes className="mx-auto h-10 w-10 text-[#b5c2d5]" />
-                    <p className="mt-3 text-[12px] font-semibold text-[#52698e]">
-                      No matching device inventory
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#8b9ab4]">
-                      Create a Device Model and receive the first
-                      physical tracker.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1180px] text-left text-[10px]">
-                    <thead className="bg-[#f4f7fb] text-[#52698e]">
-                      <tr>
-                        {[
-                          "Device",
-                          "IMEI",
-                          "Serial",
-                          "Model",
-                          "Network",
-                          "Lifecycle",
-                          "Current custody",
-                          "Received",
-                          "Versions",
-                          "Action",
-                        ].map((heading) => (
-                          <th
-                            key={heading}
-                            className="px-4 py-3 font-semibold"
-                          >
-                            {heading}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
+                <span>
+                  Page {page} / {totalPages}
+                </span>
 
-                    <tbody>
-                      {devices.map((device) => {
-                        const allocation =
-                          device.dealerAllocations?.[0] ?? null;
-                        const installed =
-                          (device.vehicleAssignments?.length ?? 0) > 0 ||
-                          device.lifecycleStatus === "INSTALLED";
-                        const allocatable =
-                          canAllocateDevices &&
-                          !allocation &&
-                          !installed &&
-                          ["RECEIVED", "IN_STOCK"].includes(
-                            device.lifecycleStatus,
-                          );
-
-                        return (
-                          <tr
-                            key={device.id}
-                            className="border-t border-[#e2e8f1] text-[#52698e] hover:bg-[#f8faff]"
-                          >
-                            <td className="px-4 py-4">
-                              <p className="font-semibold text-[#405779]">
-                                {device.deviceCode}
-                              </p>
-                              <p className="mt-1 text-[9px] text-[#8b9ab4]">
-                                {device.id.slice(0, 8)}
-                              </p>
-                            </td>
-
-                            <td className="px-4 py-4 font-medium text-[#357cf4]">
-                              {device.imei || "-"}
-                            </td>
-
-                            <td className="px-4 py-4">
-                              {device.serialNumber || "-"}
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <p className="font-semibold text-[#405779]">
-                                {device.deviceModel.manufacturer}{" "}
-                                {device.deviceModel.modelName}
-                              </p>
-                              <p className="mt-1 text-[9px] text-[#8b9ab4]">
-                                {device.deviceModel.modelCode}
-                              </p>
-                            </td>
-
-                            <td className="px-4 py-4">
-                              {device.deviceModel.networkType || "-"}
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <span
-                                className={[
-                                  "rounded-full px-2 py-1 text-[9px] font-semibold",
-                                  statusClass(
-                                    device.lifecycleStatus,
-                                  ),
-                                ].join(" ")}
-                              >
-                                {device.lifecycleStatus.replaceAll(
-                                  "_",
-                                  " ",
-                                )}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <p className="font-semibold text-[#405779]">
-                                {custodyLabel(device)}
-                              </p>
-                              <p className="mt-1 text-[9px] text-[#8b9ab4]">
-                                {allocation
-                                  ? allocation.allocationCode ??
-                                    "Dealer allocation"
-                                  : "Platform custody"}
-                              </p>
-                            </td>
-
-                            <td className="px-4 py-4">
-                              {formatDate(
-                                device.receivedAt ??
-                                  device.createdAt,
-                              )}
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <p>
-                                HW {device.hardwareVersion || "-"}
-                              </p>
-                              <p className="mt-1">
-                                FW {device.firmwareVersion || "-"}
-                              </p>
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setAllocationDevice(device)
-                                }
-                                disabled={!allocatable}
-                                title={
-                                  allocatable
-                                    ? "Allocate this Platform stock device to a Dealer"
-                                    : "Only unallocated Platform stock can be allocated"
-                                }
-                                className="flex h-8 items-center gap-2 rounded-[3px] bg-[#357cf4] px-3 text-[10px] font-semibold text-white disabled:bg-[#b8c7dc]"
-                              >
-                                <Building2 className="h-3.5 w-3.5" />
-                                {allocation
-                                  ? "Allocated"
-                                  : installed
-                                    ? "Installed"
-                                    : "Allocate"}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-        </section>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => {
+                    prepareReload();
+                    setPage((current) =>
+                      Math.min(totalPages, current + 1),
+                    );
+                  }}
+                  className="h-8 rounded-[3px] border border-[#cfd8e7] bg-white px-3 font-semibold disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          </section>
+        </main>
       </div>
 
       {modelModalOpen ? (
@@ -694,11 +873,22 @@ export function DeviceManagementWorkspace({
         />
       ) : null}
 
-      {allocationDevice ? (
-        <AllocateDeviceModal
-          device={allocationDevice}
-          onClose={() => setAllocationDevice(null)}
-          onAllocated={deviceAllocated}
+      {bulkModalOpen ? (
+        <BulkDeviceStockIntakeModal
+          models={models}
+          onClose={() => setBulkModalOpen(false)}
+          onCompleted={bulkCompleted}
+        />
+      ) : null}
+
+      {transferModalOpen ? (
+        <DeviceSellMoveModal
+          selectedDevices={selectedDevices}
+          availableDevices={devices}
+          dealers={hierarchy.dealers}
+          customers={hierarchy.customers}
+          onClose={() => setTransferModalOpen(false)}
+          onCompleted={transferCompleted}
         />
       ) : null}
     </>

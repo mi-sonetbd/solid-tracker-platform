@@ -13,14 +13,13 @@ export default async function ManagementDevicePage() {
     <DeviceManagementWorkspace
       workspace={session.workspace}
       canViewDevices={permissions.has("device.view")}
+      canViewDealers={permissions.has("dealer.view")}
+      canViewCustomers={permissions.has("customer.view")}
       canRegisterDevices={
         platformWorkspace &&
         permissions.has("device.register")
       }
-      canAllocateDevices={
-        platformWorkspace &&
-        permissions.has("device.register")
-      }
+      canTransferDevices={permissions.has("device.remove")}
     />
   );
 }

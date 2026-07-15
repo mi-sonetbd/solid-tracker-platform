@@ -101,6 +101,20 @@ function parseDevice(payload: unknown): RegisterDeviceInput {
   };
 }
 
+function optionalUuid(
+  request: NextRequest,
+  name: string,
+) {
+  const value =
+    request.nextUrl.searchParams.get(name)?.trim() || undefined;
+
+  if (value && !uuidPattern.test(value)) {
+    return null;
+  }
+
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   const page = positiveInteger(
     request.nextUrl.searchParams.get("page"),
@@ -109,7 +123,7 @@ export async function GET(request: NextRequest) {
   );
   const pageSize = positiveInteger(
     request.nextUrl.searchParams.get("pageSize"),
-    20,
+    25,
     100,
   );
   const search =
@@ -118,12 +132,23 @@ export async function GET(request: NextRequest) {
   const lifecycleStatus =
     request.nextUrl.searchParams.get("lifecycleStatus")?.trim() ||
     undefined;
-  const deviceModelId =
-    request.nextUrl.searchParams.get("deviceModelId")?.trim() ||
-    undefined;
-  const dealerOrganizationId =
-    request.nextUrl.searchParams.get("dealerOrganizationId")?.trim() ||
-    undefined;
+  const deviceModelId = optionalUuid(request, "deviceModelId");
+  const dealerOrganizationId = optionalUuid(
+    request,
+    "dealerOrganizationId",
+  );
+  const customerId = optionalUuid(request, "customerId");
+
+  if (
+    deviceModelId === null ||
+    dealerOrganizationId === null ||
+    customerId === null
+  ) {
+    return managementJsonError(
+      "A selected hierarchy or Device Model identifier is invalid.",
+      400,
+    );
+  }
 
   if (
     lifecycleStatus &&
@@ -132,22 +157,13 @@ export async function GET(request: NextRequest) {
     )
   ) {
     return managementJsonError(
-      "The device lifecycle filter is invalid.",
+      "The selected lifecycle status is invalid.",
       400,
     );
   }
 
-  for (const identifier of [
-    deviceModelId,
-    dealerOrganizationId,
-  ]) {
-    if (identifier && !uuidPattern.test(identifier)) {
-      return managementJsonError(
-        "A selected inventory identifier is invalid.",
-        400,
-      );
-    }
-  }
+  const directCustomers =
+    request.nextUrl.searchParams.get("directCustomers") === "true";
 
   return withManagementSession(request, (accessToken) =>
     backendListDevices(accessToken, {
@@ -157,6 +173,8 @@ export async function GET(request: NextRequest) {
       lifecycleStatus,
       deviceModelId,
       dealerOrganizationId,
+      customerId,
+      directCustomers,
     }),
   );
 }

@@ -13,11 +13,13 @@ import { AssetAccessService } from '../common/asset-access.service';
 import { AssetCodeService } from '../common/asset-code.service';
 import type { DeviceQueryDto } from '../common/asset-query.dto';
 import type { AllocateDeviceDto } from './dto/allocate-device.dto';
+import type { BulkRegisterDevicesDto } from './dto/bulk-register-devices.dto';
 import type { InstallDeviceDto } from './dto/install-device.dto';
 import type { RegisterDeviceDto } from './dto/register-device.dto';
 import type { RemoveDeviceDto } from './dto/remove-device.dto';
 import type { ReplaceDeviceDto } from './dto/replace-device.dto';
 import type { ReturnDeviceDto } from './dto/return-device.dto';
+import type { TransferDevicesDto } from './dto/transfer-devices.dto';
 import type { UpdateDeviceDto } from './dto/update-device.dto';
 
 type TransactionClient = Prisma.TransactionClient;
@@ -74,18 +76,7 @@ export class DevicesService {
               lifecycleStatus: query.lifecycleStatus,
             }
           : {},
-        query.dealerOrganizationId
-          ? {
-              dealerAllocations: {
-                some: {
-                  dealerOrganizationId: query.dealerOrganizationId,
-                  status: {
-                    in: [...activeAllocationStatuses],
-                  },
-                },
-              },
-            }
-          : {},
+        this.listScopeWhere(query),
       ],
     };
 
@@ -417,6 +408,332 @@ export class DevicesService {
     return updated;
   }
 
+  async bulkRegister(auth: AuthContext, dto: BulkRegisterDevicesDto) {
+    this.access.assertPlatform(auth);
+
+    const seen = new Set<string>();
+    const results: Array<{
+      imei: string;
+      status: 'CREATED' | 'ERROR';
+      device?: unknown;
+      message?: string;
+    }> = [];
+
+    for (const rawImei of dto.imeis) {
+      const imei = rawImei.trim();
+
+      if (!/^\d{14,17}$/.test(imei)) {
+        results.push({
+          imei,
+          status: 'ERROR',
+          message: 'IMEI must contain 14 to 17 digits.',
+        });
+        continue;
+      }
+
+      if (seen.has(imei)) {
+        results.push({
+          imei,
+          status: 'ERROR',
+          message: 'Duplicate IMEI exists in this request.',
+        });
+        continue;
+      }
+
+      seen.add(imei);
+
+      try {
+        const device = await this.register(auth, {
+          deviceModelId: dto.deviceModelId,
+          imei,
+          hardwareVersion: dto.hardwareVersion,
+          firmwareVersion: dto.firmwareVersion,
+          receivedAt: dto.receivedAt,
+        });
+
+        results.push({
+          imei,
+          status: 'CREATED',
+          device,
+        });
+      } catch (error) {
+        results.push({
+          imei,
+          status: 'ERROR',
+          message: error instanceof Error ? error.message : 'Device registration failed.',
+        });
+      }
+    }
+
+    const created = results.filter((result) => result.status === 'CREATED').length;
+
+    return {
+      total: results.length,
+      created,
+      failed: results.length - created,
+      results,
+    };
+  }
+
+  async transfer(auth: AuthContext, dto: TransferDevicesDto) {
+    const deviceIds = Array.from(new Set(dto.deviceIds));
+
+    if (deviceIds.length !== dto.deviceIds.length) {
+      throw new BadRequestException('The transfer request contains duplicate Device identifiers.');
+    }
+
+    let targetCustomer: {
+      id: string;
+      status: string;
+      managingDealerId: string | null;
+    } | null = null;
+
+    if (dto.targetType === 'DEALER') {
+      this.access.assertDealer(auth, dto.targetId);
+
+      const dealer = await this.prisma.organization.findFirst({
+        where: {
+          id: dto.targetId,
+          type: 'DEALER',
+          status: 'ACTIVE',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!dealer) {
+        throw new BadRequestException('An active destination Dealer is required.');
+      }
+    } else {
+      const customer = await this.access.assertCustomerMutation(auth, dto.targetId);
+
+      if (!['PENDING', 'ACTIVE'].includes(customer.status)) {
+        throw new BadRequestException('The destination Customer must be active or pending.');
+      }
+
+      targetCustomer = {
+        id: customer.id,
+        status: customer.status,
+        managingDealerId: customer.managingDealerId,
+      };
+    }
+
+    const devices = await this.prisma.device.findMany({
+      where: {
+        AND: [
+          {
+            id: {
+              in: deviceIds,
+            },
+          },
+          this.access.deviceWhere(auth),
+        ],
+      },
+      include: {
+        vehicleAssignments: {
+          where: {
+            status: 'ACTIVE',
+          },
+        },
+      },
+    });
+
+    if (devices.length !== deviceIds.length) {
+      throw new NotFoundException(
+        'One or more Devices were not found within the authenticated scope.',
+      );
+    }
+
+    const blocked = devices.filter(
+      (device) =>
+        device.vehicleAssignments.length > 0 ||
+        !['RECEIVED', 'IN_STOCK', 'ALLOCATED'].includes(device.lifecycleStatus),
+    );
+
+    if (blocked.length > 0) {
+      throw new ConflictException(
+        'Installed, assigned, damaged, lost, repaired, or retired Devices cannot be moved.',
+      );
+    }
+
+    const now = new Date();
+    const notes = this.optional(dto.notes);
+
+    await this.prisma.$transaction(async (transaction) => {
+      for (const device of devices) {
+        await transaction.dealerDeviceAllocation.updateMany({
+          where: {
+            deviceId: device.id,
+            status: {
+              in: [...activeAllocationStatuses],
+            },
+          },
+          data: {
+            status: 'RETURNED',
+            returnedAt: now,
+            returnedByUserId: auth.userId,
+          },
+        });
+
+        await this.endCurrentOwnership(transaction, device.id, now);
+
+        await this.endCurrentCustody(transaction, device.id, now);
+
+        if (dto.targetType === 'DEALER') {
+          await transaction.deviceOwnershipHistory.create({
+            data: {
+              deviceId: device.id,
+              ownerType: 'DEALER',
+              ownerOrganizationId: dto.targetId,
+              reason: 'TRANSFER',
+              changedByUserId: auth.userId,
+              notes,
+              startedAt: now,
+            },
+          });
+
+          await transaction.deviceCustodyHistory.create({
+            data: {
+              deviceId: device.id,
+              custodianType: 'DEALER',
+              custodianOrganizationId: dto.targetId,
+              reason: 'TRANSFER',
+              changedByUserId: auth.userId,
+              notes,
+              startedAt: now,
+            },
+          });
+
+          await transaction.dealerDeviceAllocation.create({
+            data: {
+              allocationCode: this.codes.allocation(),
+              dealerOrganizationId: dto.targetId,
+              deviceId: device.id,
+              status: 'AVAILABLE',
+              allocatedAt: now,
+              availableAt: now,
+              allocatedByUserId: auth.userId,
+              notes,
+            },
+          });
+        } else {
+          await transaction.deviceOwnershipHistory.create({
+            data: {
+              deviceId: device.id,
+              ownerType: 'CUSTOMER',
+              ownerCustomerId: dto.targetId,
+              reason: 'TRANSFER',
+              changedByUserId: auth.userId,
+              notes,
+              startedAt: now,
+            },
+          });
+
+          await transaction.deviceCustodyHistory.create({
+            data: {
+              deviceId: device.id,
+              custodianType: 'CUSTOMER',
+              custodianCustomerId: dto.targetId,
+              reason: 'TRANSFER',
+              changedByUserId: auth.userId,
+              notes,
+              startedAt: now,
+            },
+          });
+
+          if (targetCustomer?.managingDealerId) {
+            await transaction.dealerDeviceAllocation.create({
+              data: {
+                allocationCode: this.codes.allocation(),
+                dealerOrganizationId: targetCustomer.managingDealerId,
+                deviceId: device.id,
+                status: 'AVAILABLE',
+                allocatedAt: now,
+                availableAt: now,
+                allocatedByUserId: auth.userId,
+                notes,
+              },
+            });
+          }
+        }
+
+        await transaction.device.update({
+          where: {
+            id: device.id,
+          },
+          data: {
+            lifecycleStatus: 'ALLOCATED',
+          },
+        });
+      }
+    });
+
+    const moved = await this.prisma.device.findMany({
+      where: {
+        id: {
+          in: deviceIds,
+        },
+      },
+      include: {
+        deviceModel: true,
+        ownershipHistory: {
+          where: {
+            endedAt: null,
+          },
+        },
+        custodyHistory: {
+          where: {
+            endedAt: null,
+          },
+        },
+        dealerAllocations: {
+          where: {
+            status: {
+              in: [...activeAllocationStatuses],
+            },
+          },
+          include: {
+            dealerOrganization: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+        vehicleAssignments: {
+          where: {
+            status: 'ACTIVE',
+          },
+          include: {
+            vehicle: true,
+          },
+        },
+      },
+    });
+
+    for (const device of moved) {
+      await this.auditService.record({
+        actorUserId: auth.userId,
+        actorOrganizationId: this.access.actorOrganizationId(auth),
+        action: 'device.transferred',
+        resourceType: 'Device',
+        resourceId: device.id,
+        scopeType: dto.targetType,
+        scopeId: dto.targetId,
+        afterData: device,
+      });
+    }
+
+    return {
+      items: moved,
+      total: moved.length,
+      targetType: dto.targetType,
+      targetId: dto.targetId,
+    };
+  }
   async allocate(auth: AuthContext, deviceId: string, dto: AllocateDeviceDto) {
     this.access.assertPlatform(auth);
 
@@ -1258,6 +1575,114 @@ export class DevicesService {
     };
   }
 
+  private listScopeWhere(query: DeviceQueryDto): Prisma.DeviceWhereInput {
+    if (query.customerId) {
+      return {
+        OR: [
+          {
+            ownershipHistory: {
+              some: {
+                endedAt: null,
+                ownerCustomerId: query.customerId,
+              },
+            },
+          },
+          {
+            custodyHistory: {
+              some: {
+                endedAt: null,
+                custodianCustomerId: query.customerId,
+              },
+            },
+          },
+          {
+            vehicleAssignments: {
+              some: {
+                status: 'ACTIVE',
+                vehicle: {
+                  customerId: query.customerId,
+                },
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    if (query.directCustomers) {
+      return {
+        OR: [
+          {
+            ownershipHistory: {
+              some: {
+                endedAt: null,
+                ownerCustomer: {
+                  is: {
+                    managingDealerId: null,
+                  },
+                },
+              },
+            },
+          },
+          {
+            custodyHistory: {
+              some: {
+                endedAt: null,
+                custodianCustomer: {
+                  is: {
+                    managingDealerId: null,
+                  },
+                },
+              },
+            },
+          },
+          {
+            vehicleAssignments: {
+              some: {
+                status: 'ACTIVE',
+                vehicle: {
+                  customer: {
+                    managingDealerId: null,
+                  },
+                },
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    if (query.dealerOrganizationId) {
+      return {
+        dealerAllocations: {
+          some: {
+            dealerOrganizationId: query.dealerOrganizationId,
+            status: {
+              in: [...activeAllocationStatuses],
+            },
+          },
+        },
+      };
+    }
+
+    return {};
+  }
+
+  private async endCurrentOwnership(
+    transaction: TransactionClient,
+    deviceId: string,
+    endedAt: Date,
+  ): Promise<void> {
+    await transaction.deviceOwnershipHistory.updateMany({
+      where: {
+        deviceId,
+        endedAt: null,
+      },
+      data: {
+        endedAt,
+      },
+    });
+  }
   private async endCurrentCustody(
     transaction: TransactionClient,
     deviceId: string,

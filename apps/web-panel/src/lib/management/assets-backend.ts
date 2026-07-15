@@ -3,6 +3,8 @@ import "server-only";
 import { authConfig } from "@/lib/auth/auth-config";
 import type {
   AllocateDeviceInput,
+  BulkDeviceRegistrationResult,
+  BulkRegisterDevicesInput,
   CreateDeviceModelInput,
   CreateVehicleInput,
   DealerDeviceAllocationResult,
@@ -13,6 +15,8 @@ import type {
   DeviceSummary,
   InstallDeviceInput,
   RegisterDeviceInput,
+  TransferDevicesInput,
+  TransferDevicesResult,
   VehicleListResponse,
   VehicleSummary,
 } from "@/lib/management/asset-types";
@@ -162,13 +166,17 @@ export function backendCreateVehicle(
   accessToken: string,
   input: CreateVehicleInput,
 ) {
-  return assetRequest<VehicleSummary>(accessToken, "/vehicles", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return assetRequest<VehicleSummary>(
+    accessToken,
+    "/vehicles",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
     },
-    body: JSON.stringify(input),
-  });
+  );
 }
 
 export function backendListDevices(
@@ -180,6 +188,8 @@ export function backendListDevices(
     lifecycleStatus?: string;
     deviceModelId?: string;
     dealerOrganizationId?: string;
+    customerId?: string;
+    directCustomers?: boolean;
   },
 ) {
   const parameters = new URLSearchParams({
@@ -195,7 +205,16 @@ export function backendListDevices(
     parameters.set("deviceModelId", query.deviceModelId);
   }
   if (query.dealerOrganizationId) {
-    parameters.set("dealerOrganizationId", query.dealerOrganizationId);
+    parameters.set(
+      "dealerOrganizationId",
+      query.dealerOrganizationId,
+    );
+  }
+  if (query.customerId) {
+    parameters.set("customerId", query.customerId);
+  }
+  if (query.directCustomers) {
+    parameters.set("directCustomers", "true");
   }
 
   return assetRequest<DeviceListResponse>(
@@ -209,13 +228,51 @@ export function backendRegisterDevice(
   accessToken: string,
   input: RegisterDeviceInput,
 ) {
-  return assetRequest<DeviceSummary>(accessToken, "/devices", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return assetRequest<DeviceSummary>(
+    accessToken,
+    "/devices",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
     },
-    body: JSON.stringify(input),
-  });
+  );
+}
+
+export function backendBulkRegisterDevices(
+  accessToken: string,
+  input: BulkRegisterDevicesInput,
+) {
+  return assetRequest<BulkDeviceRegistrationResult>(
+    accessToken,
+    "/devices/bulk",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function backendTransferDevices(
+  accessToken: string,
+  input: TransferDevicesInput,
+) {
+  return assetRequest<TransferDevicesResult>(
+    accessToken,
+    "/devices/transfer",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function backendAllocateDevice(

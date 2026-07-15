@@ -119,6 +119,36 @@ export type DealerDeviceAllocationSummary = {
   };
 };
 
+export type DeviceOwnershipSummary = {
+  id: string;
+  ownerType: string;
+  ownerOrganizationId: string | null;
+  ownerCustomerId: string | null;
+  startedAt?: string;
+  endedAt?: string | null;
+};
+
+export type DeviceCustodySummary = {
+  id: string;
+  custodianType: string;
+  custodianOrganizationId: string | null;
+  custodianCustomerId: string | null;
+  startedAt?: string;
+  endedAt?: string | null;
+};
+
+export type DeviceVehicleAssignmentSummary = {
+  id: string;
+  status: string;
+  vehicleId: string;
+  vehicle?: {
+    id: string;
+    customerId: string;
+    vehicleCode: string;
+    registrationNumber: string | null;
+  };
+};
+
 export type DeviceSummary = {
   id: string;
   deviceCode: string;
@@ -134,21 +164,9 @@ export type DeviceSummary = {
   updatedAt?: string;
   deviceModel: DeviceModelSummary;
   dealerAllocations?: DealerDeviceAllocationSummary[];
-  vehicleAssignments?: Array<{
-    id: string;
-    status: string;
-    vehicleId: string;
-  }>;
-  ownershipHistory?: Array<{
-    id: string;
-    ownerType: string;
-    ownerOrganizationId: string | null;
-  }>;
-  custodyHistory?: Array<{
-    id: string;
-    custodianType: string;
-    custodianOrganizationId: string | null;
-  }>;
+  vehicleAssignments?: DeviceVehicleAssignmentSummary[];
+  ownershipHistory?: DeviceOwnershipSummary[];
+  custodyHistory?: DeviceCustodySummary[];
 };
 
 export type DeviceListResponse = {
@@ -166,6 +184,42 @@ export type RegisterDeviceInput = {
   hardwareVersion?: string;
   firmwareVersion?: string;
   receivedAt?: string;
+};
+
+export type BulkRegisterDevicesInput = {
+  deviceModelId: string;
+  imeis: string[];
+  hardwareVersion?: string;
+  firmwareVersion?: string;
+  receivedAt?: string;
+};
+
+export type BulkDeviceRegistrationLineResult = {
+  imei: string;
+  status: "CREATED" | "ERROR";
+  device?: DeviceSummary;
+  message?: string;
+};
+
+export type BulkDeviceRegistrationResult = {
+  total: number;
+  created: number;
+  failed: number;
+  results: BulkDeviceRegistrationLineResult[];
+};
+
+export type TransferDevicesInput = {
+  deviceIds: string[];
+  targetType: "DEALER" | "CUSTOMER";
+  targetId: string;
+  notes?: string;
+};
+
+export type TransferDevicesResult = {
+  items: DeviceSummary[];
+  total: number;
+  targetType: "DEALER" | "CUSTOMER";
+  targetId: string;
 };
 
 export type AllocateDeviceInput = {

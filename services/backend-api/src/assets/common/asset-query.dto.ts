@@ -1,5 +1,6 @@
+import { Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../management/common/pagination-query.dto';
 
 const vehicleStatuses = ['PENDING', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'ARCHIVED'] as const;
@@ -56,6 +57,17 @@ export class DeviceQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   dealerOrganizationId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  directCustomers?: boolean;
 
   @ApiPropertyOptional({ enum: deviceStatuses })
   @IsOptional()
