@@ -263,3 +263,33 @@ export type DeviceInstallationResult = {
   vehicleId: string;
   status: string;
 };
+export type DeviceAssignmentEndReason =
+  | "DEVICE_FAILURE"
+  | "DEVICE_REPLACEMENT"
+  | "VEHICLE_TRANSFER"
+  | "VEHICLE_SOLD"
+  | "CUSTOMER_REQUEST"
+  | "SUBSCRIPTION_CANCELLED"
+  | "TRANSFER_TO_ANOTHER_VEHICLE"
+  | "LOST"
+  | "OTHER";
+
+export type DeviceRemovalReason =
+  | "CUSTOMER_REQUEST"
+  | "VEHICLE_SOLD"
+  | "DEVICE_FAILURE"
+  | "WARRANTY_REPLACEMENT"
+  | "SUBSCRIPTION_CANCELLED"
+  | "TRANSFER_TO_ANOTHER_VEHICLE"
+  | "LOST"
+  | "OTHER";
+
+export type RemoveDeviceInput = {
+  assignmentEndReason: DeviceAssignmentEndReason;
+  removalReason: DeviceRemovalReason;
+  notes?: string;
+};
+
+export type ReturnDeviceInput = {
+  notes?: string;
+};

@@ -24,6 +24,10 @@ import {
 import { AddDeviceModelModal } from "@/components/management/add-device-model-modal";
 import { BulkDeviceStockIntakeModal } from "@/components/management/bulk-device-stock-intake-modal";
 import { DeviceSellMoveModal } from "@/components/management/device-sell-move-modal";
+import {
+  DeviceUninstallReturnModal,
+  type DeviceLifecycleActionResult,
+} from "@/components/management/device-uninstall-return-modal";
 import { DeviceStockIntakeModal } from "@/components/management/device-stock-intake-modal";
 import { ManagementMonitorAccountTree } from "@/components/management/management-monitor-account-tree";
 import type {
@@ -88,6 +92,49 @@ function formatDate(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function hasActiveVehicleAssignment(
+  device: DeviceSummary,
+) {
+  return (
+    device.lifecycleStatus === "INSTALLED" ||
+    Boolean(
+      device.vehicleAssignments?.some(
+        (assignment) =>
+          assignment.status === "ACTIVE",
+      ),
+    )
+  );
+}
+
+function hasActiveDealerAllocation(
+  device: DeviceSummary,
+) {
+  return Boolean(
+    device.dealerAllocations?.some((allocation) =>
+      ["ALLOCATED", "AVAILABLE", "INSTALLED"].includes(
+        allocation.status,
+      ),
+    ),
+  );
+}
+
+function supportsLifecycleAction(
+  device: DeviceSummary,
+) {
+  return (
+    hasActiveVehicleAssignment(device) ||
+    hasActiveDealerAllocation(device)
+  );
+}
+
+function lifecycleActionLabel(
+  device: DeviceSummary,
+) {
+  return hasActiveVehicleAssignment(device)
+    ? "Uninstall"
+    : "Return";
 }
 
 function statusClass(status: string) {
@@ -218,6 +265,8 @@ export function DeviceManagementWorkspace({
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] =
     useState(false);
+  const [lifecycleDevice, setLifecycleDevice] =
+    useState<DeviceSummary | null>(null);
 
   const hierarchy = useManagementMonitorHierarchy({
     canViewDealers,
@@ -380,6 +429,15 @@ export function DeviceManagementWorkspace({
       ),
   );
 
+  const firstSelectedDevice =
+    selectedDevices[0] ?? null;
+  const selectedLifecycleDevice =
+    selectedDevices.length === 1 &&
+    firstSelectedDevice &&
+    supportsLifecycleAction(firstSelectedDevice)
+      ? firstSelectedDevice
+      : null;
+
   const allSelected =
     devices.length > 0 &&
     devices.every((device) => selectedIds.has(device.id));
@@ -459,6 +517,39 @@ export function DeviceManagementWorkspace({
     setSelectedIds(new Set([device.id]));
     setTransferModalOpen(true);
     setError("");
+  }
+
+  function openLifecycleAction(
+    device: DeviceSummary,
+  ) {
+    if (
+      !canTransferDevices ||
+      !supportsLifecycleAction(device)
+    ) {
+      setError(
+        "This Device is not eligible for uninstall or return in the current scope.",
+      );
+      return;
+    }
+
+    setLifecycleDevice(device);
+    setError("");
+    setSuccess("");
+  }
+
+  function lifecycleCompleted(
+    result: DeviceLifecycleActionResult,
+  ) {
+    setLifecycleDevice(null);
+    setSelectedIds(new Set());
+    setError("");
+    setSuccess(
+      result.warning
+        ? `${result.message} Warning: ${result.warning}`
+        : result.message,
+    );
+    setLoading(true);
+    setRefreshVersion((current) => current + 1);
   }
 
   function modelCreated(model: DeviceModelSummary) {
@@ -596,9 +687,25 @@ export function DeviceManagementWorkspace({
               />
               <ActionButton
                 icon={<Unlink className="h-3.5 w-3.5" />}
-                label="Unbind"
-                disabled
-                title="Installed trackers must use the explicit removal workflow"
+                label="Uninstall / Return"
+                onClick={() => {
+                  if (selectedLifecycleDevice) {
+                    openLifecycleAction(
+                      selectedLifecycleDevice,
+                    );
+                  }
+                }}
+                disabled={
+                  !canTransferDevices ||
+                  !selectedLifecycleDevice
+                }
+                title={
+                  selectedDevices.length !== 1
+                    ? "Select exactly one installed or Dealer-stock Device"
+                    : selectedLifecycleDevice
+                      ? `${lifecycleActionLabel(selectedLifecycleDevice)} this Device`
+                      : "The selected Device has no active installation or returnable Dealer allocation"
+                }
               />
 
               {canRegisterDevices ? (
@@ -809,25 +916,44 @@ export function DeviceManagementWorkspace({
                           </span>
                         </td>
                         <td className="px-3 py-3">
-                          <button
-                            type="button"
-                            onClick={() => openSingleTransfer(device)}
-                            disabled={
-                              !canTransferDevices ||
-                              (device.vehicleAssignments?.length ?? 0) > 0 ||
-                              ![
-                                "RECEIVED",
-                                "IN_STOCK",
-                                "ALLOCATED",
-                              ].includes(device.lifecycleStatus)
-                            }
-                            aria-label={`Sell or move ${device.deviceCode}`}
-                            title="Sell or move this Device"
-                            className="inline-flex h-7 items-center gap-1 rounded-[3px] border border-[#357cf4] px-2 text-[9px] font-semibold text-[#357cf4] hover:bg-[#357cf4] hover:text-white disabled:cursor-not-allowed disabled:border-[#cbd5e1] disabled:text-[#a4afc0] disabled:hover:bg-transparent"
-                          >
-                            <MoveRight className="h-3 w-3" />
-                            Sell/move
-                          </button>
+                          {supportsLifecycleAction(device) ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openLifecycleAction(device)
+                              }
+                              disabled={!canTransferDevices}
+                              aria-label={`${lifecycleActionLabel(device)} ${device.deviceCode}`}
+                              title={`${lifecycleActionLabel(device)} this Device`}
+                              className="inline-flex h-7 items-center gap-1 rounded-[3px] border border-[#ef8b2c] px-2 text-[9px] font-semibold text-[#d96f10] hover:bg-[#ef8b2c] hover:text-white disabled:cursor-not-allowed disabled:border-[#cbd5e1] disabled:text-[#a4afc0] disabled:hover:bg-transparent"
+                            >
+                              <Unlink className="h-3 w-3" />
+                              {lifecycleActionLabel(device)}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openSingleTransfer(device)
+                              }
+                              disabled={
+                                !canTransferDevices ||
+                                ![
+                                  "RECEIVED",
+                                  "IN_STOCK",
+                                  "ALLOCATED",
+                                ].includes(
+                                  device.lifecycleStatus,
+                                )
+                              }
+                              aria-label={`Sell or move ${device.deviceCode}`}
+                              title="Sell or move this Device"
+                              className="inline-flex h-7 items-center gap-1 rounded-[3px] border border-[#357cf4] px-2 text-[9px] font-semibold text-[#357cf4] hover:bg-[#357cf4] hover:text-white disabled:cursor-not-allowed disabled:border-[#cbd5e1] disabled:text-[#a4afc0] disabled:hover:bg-transparent"
+                            >
+                              <MoveRight className="h-3 w-3" />
+                              Sell/move
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -919,6 +1045,14 @@ export function DeviceManagementWorkspace({
           models={models}
           onClose={() => setBulkModalOpen(false)}
           onCompleted={bulkCompleted}
+        />
+      ) : null}
+
+      {lifecycleDevice ? (
+        <DeviceUninstallReturnModal
+          device={lifecycleDevice}
+          onClose={() => setLifecycleDevice(null)}
+          onCompleted={lifecycleCompleted}
         />
       ) : null}
 

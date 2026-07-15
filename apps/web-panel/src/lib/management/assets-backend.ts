@@ -15,6 +15,8 @@ import type {
   DeviceSummary,
   InstallDeviceInput,
   RegisterDeviceInput,
+  RemoveDeviceInput,
+  ReturnDeviceInput,
   TransferDevicesInput,
   TransferDevicesResult,
   VehicleListResponse,
@@ -301,6 +303,41 @@ export function backendInstallDevice(
   return assetRequest<DeviceInstallationResult>(
     accessToken,
     `/devices/${deviceId}/install`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+export function backendRemoveDevice(
+  accessToken: string,
+  deviceId: string,
+  input: RemoveDeviceInput,
+) {
+  return assetRequest<unknown>(
+    accessToken,
+    `/devices/${deviceId}/remove`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function backendReturnDevice(
+  accessToken: string,
+  deviceId: string,
+  input: ReturnDeviceInput,
+) {
+  return assetRequest<unknown>(
+    accessToken,
+    `/devices/${deviceId}/return`,
     {
       method: "POST",
       headers: {
