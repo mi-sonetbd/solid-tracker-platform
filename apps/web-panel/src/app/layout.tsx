@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s | Solid Tracker",
   },
   description:
-    "Solid Tracker fleet, device, customer, dealer, billing, and live tracking management platform.",
+    "Solid Tracker GPS tracking, fleet, device, report, and operations platform.",
 };
 
 export default function RootLayout({
