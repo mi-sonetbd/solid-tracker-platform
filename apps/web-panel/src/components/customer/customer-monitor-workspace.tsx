@@ -398,7 +398,7 @@ export function CustomerMonitorWorkspace({
 
   return (
     <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-h-[620px] min-w-[1180px] overflow-hidden bg-white">
-      <CustomerMonitorRail />
+      <CustomerMonitorRail activeItem="objects" />
 
       <CollapsibleObjectPanel
         collapsed={objectPanelCollapsed}
