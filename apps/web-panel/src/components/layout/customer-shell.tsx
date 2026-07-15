@@ -53,6 +53,7 @@ export function CustomerShell({
   const router = useRouter();
   const activeSection = resolveSection(pathname);
   const railItems = sectionNavigation[activeSection];
+  const showSectionRail = activeSection !== "monitor";
   const menuRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -229,7 +230,7 @@ export function CustomerShell({
       </header>
 
       <div className="flex min-h-screen pt-[var(--st-topbar-height)]">
-        <aside className="fixed bottom-0 left-0 top-[var(--st-topbar-height)] z-[1100] w-[var(--st-rail-width)] overflow-y-auto border-r border-[#e0e7f0] bg-white">
+        <aside className="fixed bottom-0 left-0 top-[var(--st-topbar-height)] z-[1100] w-[var(--st-rail-width)] overflow-y-auto border-r border-[#e0e7f0] bg-white" style={{ display: showSectionRail ? undefined : "none" }}>
           <nav
             aria-label={`${activeSection} navigation`}
             className="flex min-h-full flex-col items-center gap-2 px-[6px] py-2"
@@ -262,7 +263,7 @@ export function CustomerShell({
           </nav>
         </aside>
 
-        <main className="ml-[var(--st-rail-width)] min-w-0 flex-1">
+        <main className="ml-[var(--st-rail-width)] min-w-0 flex-1" style={{ marginLeft: showSectionRail ? undefined : 0, paddingLeft: showSectionRail ? undefined : 0 }}>
           {children}
         </main>
       </div>

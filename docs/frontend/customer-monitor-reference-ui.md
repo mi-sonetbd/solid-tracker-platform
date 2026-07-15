@@ -74,3 +74,11 @@ This UI keeps the previously verified map implementation:
 6. Navigate Monitor -> Device -> Fleet -> Report -> Monitor.
 7. Sign out while the map is visible.
 8. Confirm no `_leaflet_pos` runtime overlay appears.
+## Shell rail ownership
+
+Customer Monitor owns the dedicated reference-style Objects, Alerts, Tracks,
+and Multi-track rail. The older Customer shell section rail is hidden while
+Monitor is active, and the shell content offset is reset.
+
+The existing Customer shell rail remains unchanged on Report, Device, Video,
+and Fleet.
