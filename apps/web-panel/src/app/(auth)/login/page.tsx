@@ -1,76 +1,96 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Login",
-};
+import {
+  Check,
+  ChevronDown,
+  Eye,
+  LockKeyhole,
+  UserRound,
+} from "lucide-react";
+import { LoginVisual } from "@/components/auth/login-visual";
+import { SolidTrackerWordmark } from "@/components/brand/solid-tracker-wordmark";
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 px-5 py-10">
-      <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl md:p-9">
-        <Link href="/" className="inline-flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-500 font-black text-slate-950">
-            ST
-          </span>
-          <span>
-            <span className="block text-lg font-black tracking-tight text-slate-950">
-              Solid Tracker
-            </span>
-            <span className="block text-xs text-slate-500">
-              Secure operations panel
-            </span>
-          </span>
-        </Link>
+    <main className="st-login-background relative grid min-h-screen place-items-center overflow-hidden px-5 py-8">
+      <div className="absolute left-[8%] top-[5%] h-56 w-56 rounded-full bg-cyan-200/10 blur-3xl" />
+      <div className="absolute bottom-[6%] right-[9%] h-72 w-72 rounded-full bg-indigo-200/10 blur-3xl" />
 
-        <div className="mt-8">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">
-            Account access
-          </p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-            Sign in
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            The interface is ready. Backend authentication integration is the
-            next controlled development stage.
-          </p>
-        </div>
+      <section className="relative z-10 grid w-full max-w-[920px] overflow-hidden rounded-[14px] bg-white shadow-[0_28px_70px_rgba(22,61,151,0.3)] md:grid-cols-2">
+        <LoginVisual />
 
-        <form className="mt-7 space-y-5">
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">
-              Mobile number
-            </span>
-            <input
-              type="tel"
-              name="mobileNumber"
-              autoComplete="tel"
-              placeholder="01XXXXXXXXX"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">
-              Password
-            </span>
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
-            />
-          </label>
-
+        <div className="relative flex min-h-[610px] flex-col bg-white px-10 pb-7 pt-4 md:px-[76px]">
           <button
             type="button"
-            className="w-full rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800"
+            className="ml-auto flex h-8 min-w-[102px] items-center justify-between rounded-[3px] border border-[#ced7e5] px-3 text-[12px] text-[#617391]"
           >
-            Authentication integration pending
+            English
+            <ChevronDown className="h-3.5 w-3.5" />
           </button>
-        </form>
-      </div>
+
+          <div className="mt-[82px] flex justify-center">
+            <SolidTrackerWordmark href="" />
+          </div>
+
+          <form className="mx-auto mt-9 w-full max-w-[282px]">
+            <label className="st-input-focus flex h-9 items-center rounded-[3px] border border-[#ced7e5] px-3 transition">
+              <UserRound className="h-4 w-4 shrink-0 text-[#627694]" />
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                defaultValue="admin"
+                className="min-w-0 flex-1 border-0 bg-transparent px-2 text-[12px] text-[#465c7f] outline-none"
+              />
+            </label>
+
+            <label className="st-input-focus mt-3 flex h-9 items-center rounded-[3px] border border-[#ced7e5] px-3 transition">
+              <LockKeyhole className="h-4 w-4 shrink-0 text-[#627694]" />
+              <input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                defaultValue="solidtracker"
+                className="min-w-0 flex-1 border-0 bg-transparent px-2 text-[12px] text-[#465c7f] outline-none"
+              />
+              <Eye className="h-4 w-4 text-[#627694]" />
+            </label>
+
+            <div className="mt-3 flex items-center justify-between text-[12px]">
+              <label className="flex items-center gap-2 text-[#52698e]">
+                <span className="grid h-3.5 w-3.5 place-items-center rounded-[2px] bg-[#4b83f7] text-white">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+                Remember me
+              </label>
+
+              <button type="button" className="text-[#52698e]">
+                Forgot your password?
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="mt-10 h-9 w-full rounded-[3px] bg-[#397bf3] text-[13px] font-semibold text-white transition hover:bg-[#2766d5]"
+            >
+              Login
+            </button>
+
+            <button
+              type="button"
+              className="mt-1 block w-full text-right text-[12px] text-[#397bf3]"
+            >
+              Demo Â»
+            </button>
+          </form>
+
+          <footer className="mt-auto flex justify-center gap-3 text-[11px] text-[#7c8ba5]">
+            <button type="button">Terms of Service</button>
+            <span>|</span>
+            <button type="button">Privacy Policy</button>
+          </footer>
+        </div>
+      </section>
     </main>
   );
 }

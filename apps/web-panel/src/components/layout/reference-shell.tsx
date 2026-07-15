@@ -6,8 +6,8 @@ import {
   Bell,
   ChevronDown,
   CircleDollarSign,
-  RadioTower,
 } from "lucide-react";
+import { SolidTrackerWordmark } from "@/components/brand/solid-tracker-wordmark";
 import {
   mainNavigation,
   sectionNavigation,
@@ -27,23 +27,6 @@ function isNavigationActive(pathname: string, href: string) {
   return href !== "/" && pathname.startsWith(`${href}/`);
 }
 
-function Brand() {
-  return (
-    <Link
-      href="/monitor"
-      className="flex h-[58px] min-w-[235px] items-center justify-center rounded-br-[30px] bg-white px-5 shadow-[0_2px_7px_rgba(16,51,104,0.28)]"
-    >
-      <span className="text-[27px] font-black italic tracking-[-1.5px] text-[#1394dc]">
-        Solid
-      </span>
-      <span className="text-[27px] font-black italic tracking-[-1.5px] text-[#ff9f2f]">
-        Tracker
-      </span>
-      <RadioTower className="ml-1 h-5 w-5 text-[#ff9f2f]" strokeWidth={2.3} />
-    </Link>
-  );
-}
-
 export function ReferenceShell({
   children,
 }: Readonly<{
@@ -54,9 +37,11 @@ export function ReferenceShell({
   const railItems = sectionNavigation[activeSection];
 
   return (
-    <div className="min-h-screen bg-[#f1f4f8] text-[#263858]">
-      <header className="fixed inset-x-0 top-0 z-[1200] flex h-[58px] items-stretch bg-[#367cf6] text-white shadow-sm">
-        <Brand />
+    <div className="min-h-screen bg-[#f1f4f8] text-[#2b4065]">
+      <header className="fixed inset-x-0 top-0 z-[1200] flex h-[var(--st-topbar-height)] items-stretch bg-[#357cf4] text-white shadow-[0_1px_3px_rgba(27,67,130,0.2)]">
+        <div className="flex w-[200px] shrink-0 items-center justify-center rounded-br-[28px] bg-white px-4 shadow-[0_2px_7px_rgba(16,51,104,0.28)]">
+          <SolidTrackerWordmark compact />
+        </div>
 
         <nav
           aria-label="Platform sections"
@@ -71,40 +56,40 @@ export function ReferenceShell({
                 key={item.href}
                 href={item.href}
                 className={[
-                  "flex min-w-[103px] items-center justify-center gap-2 px-4 text-[14px] font-semibold transition",
+                  "flex min-w-[93px] items-center justify-center gap-1.5 border-r border-white/5 px-3 text-[13px] font-semibold transition",
                   active
-                    ? "bg-[#2464d8] shadow-[inset_0_-3px_0_rgba(255,255,255,0.17)]"
+                    ? "bg-[#2766d5] shadow-[inset_0_-3px_0_rgba(255,255,255,0.12)]"
                     : "hover:bg-white/10",
                 ].join(" ")}
               >
-                <Icon className="h-[19px] w-[19px]" strokeWidth={2.2} />
+                <Icon className="h-[17px] w-[17px]" strokeWidth={2.1} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="ml-auto hidden items-center gap-5 px-5 text-[13px] font-semibold lg:flex">
-          <Bell className="h-4 w-4 text-[#ff6f7d]" fill="currentColor" />
+        <div className="ml-auto hidden items-center gap-4 px-4 text-[12px] font-semibold lg:flex">
+          <Bell className="h-4 w-4 text-[#ff6879]" fill="currentColor" />
           <span className="flex items-center gap-1">
             <CircleDollarSign className="h-4 w-4" />
             <span>0</span>
           </span>
           <button
             type="button"
-            className="flex items-center gap-1.5 text-white"
+            className="flex items-center gap-1 text-white"
           >
             <span>admin</span>
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
       </header>
 
-      <div className="flex min-h-screen pt-[58px]">
-        <aside className="fixed bottom-0 left-0 top-[58px] z-[1100] w-[100px] overflow-y-auto border-r border-[#e2e8f1] bg-white">
+      <div className="flex min-h-screen pt-[var(--st-topbar-height)]">
+        <aside className="fixed bottom-0 left-0 top-[var(--st-topbar-height)] z-[1100] w-[var(--st-rail-width)] overflow-y-auto border-r border-[#e0e7f0] bg-white">
           <nav
             aria-label={`${activeSection} navigation`}
-            className="flex min-h-full flex-col items-center gap-3 px-2 py-3"
+            className="flex min-h-full flex-col items-center gap-2 px-[6px] py-2"
           >
             {railItems.map((item) => {
               const active = isNavigationActive(pathname, item.href);
@@ -115,14 +100,14 @@ export function ReferenceShell({
                   key={item.href}
                   href={item.href}
                   className={[
-                    "flex min-h-[78px] w-full flex-col items-center justify-center gap-2 rounded-lg px-1 text-center text-[12px] font-semibold transition",
+                    "flex min-h-[72px] w-full flex-col items-center justify-center gap-1.5 rounded-[7px] px-1 text-center text-[11px] font-semibold transition",
                     active
-                      ? "bg-[#367cf6] text-white shadow-sm"
-                      : "text-[#344b72] hover:bg-[#edf4ff] hover:text-[#2d70ed]",
+                      ? "bg-[#357cf4] text-white shadow-sm"
+                      : "text-[#30486d] hover:bg-[#edf4ff] hover:text-[#2d70ed]",
                   ].join(" ")}
                 >
-                  <Icon className="h-[23px] w-[23px]" strokeWidth={1.8} />
-                  <span className="max-w-[82px] leading-[15px]">
+                  <Icon className="h-[21px] w-[21px]" strokeWidth={1.85} />
+                  <span className="max-w-[72px] leading-[14px]">
                     {item.label}
                   </span>
                 </Link>
@@ -131,7 +116,9 @@ export function ReferenceShell({
           </nav>
         </aside>
 
-        <main className="ml-[100px] min-w-0 flex-1">{children}</main>
+        <main className="ml-[var(--st-rail-width)] min-w-0 flex-1">
+          {children}
+        </main>
       </div>
     </div>
   );

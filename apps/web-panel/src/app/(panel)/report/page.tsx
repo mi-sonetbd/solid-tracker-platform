@@ -18,18 +18,18 @@ const reportRows = [
 
 export default function ReportPage() {
   return (
-    <div className="min-h-[calc(100vh-58px)] bg-[#f1f4f8] p-2">
-      <section className="rounded-md bg-white">
-        <div className="flex h-12 items-end gap-9 border-b border-[#e2e8f1] px-5">
+    <div className="min-h-[calc(100vh-var(--st-topbar-height))] bg-[#f1f4f8] p-2">
+      <section className="rounded-[5px] bg-white">
+        <div className="flex h-11 items-end gap-9 border-b border-[#e2e8f1] px-5">
           {["Device Overview", "Motion Overview", "Alert Overview"].map(
             (tab, index) => (
               <button
                 key={tab}
                 type="button"
                 className={[
-                  "h-12 border-b-2 px-1 text-[13px] font-medium",
+                  "h-11 border-b-2 px-1 text-[12px] font-medium",
                   index === 0
-                    ? "border-[#367cf6] text-[#367cf6]"
+                    ? "border-[#357cf4] text-[#357cf4]"
                     : "border-transparent text-[#52698e]",
                 ].join(" ")}
               >
@@ -39,9 +39,10 @@ export default function ReportPage() {
           )}
         </div>
 
-        <div className="px-4 py-4">
-          <RefreshCw className="h-4 w-4 text-[#367cf6]" />
-          <div className="mt-2 flex flex-wrap justify-between gap-4">
+        <div className="px-4 pb-4 pt-3">
+          <RefreshCw className="h-4 w-4 text-[#357cf4]" />
+
+          <div className="mt-1 flex flex-wrap justify-between gap-2">
             <StatusRing
               label="Total"
               value="100%"
@@ -81,9 +82,9 @@ export default function ReportPage() {
         </div>
       </section>
 
-      <section className="mt-3 overflow-hidden rounded-md bg-white p-4">
+      <section className="mt-2 overflow-hidden rounded-[5px] bg-white p-3">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1150px] text-center text-[12px]">
+          <table className="w-full min-w-[1120px] text-center text-[11px]">
             <thead className="bg-[#edf1f7] text-[#405779]">
               <tr>
                 {[
@@ -107,12 +108,13 @@ export default function ReportPage() {
                 ))}
               </tr>
             </thead>
+
             <tbody>
               {reportRows.map((row) => (
                 <tr key={row.no} className="text-[#4f6385]">
                   <td className="border border-[#e2e8f1] px-3 py-3">{row.no}</td>
                   <td className="border border-[#e2e8f1] px-3 py-3">{row.device}</td>
-                  <td className="border border-[#e2e8f1] px-3 py-3 text-[#367cf6]">
+                  <td className="border border-[#e2e8f1] px-3 py-3 text-[#357cf4]">
                     {row.address}
                   </td>
                   <td className="border border-[#e2e8f1] px-3 py-3">{row.mileage}</td>
