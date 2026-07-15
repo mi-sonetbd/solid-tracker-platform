@@ -25,36 +25,61 @@ const mapTools = [
   Map,
 ];
 
-type CollapseToggleProps = {
+type CollapsiblePanelProps = {
+  expandedWidth: string;
   collapsed: boolean;
-  side: "left" | "right";
   label: string;
-  onClick: () => void;
+  children: React.ReactNode;
+  onToggle: () => void;
 };
 
-function CollapseToggle({
+function CollapsiblePanel({
+  expandedWidth,
   collapsed,
-  side,
   label,
-  onClick,
-}: CollapseToggleProps) {
-  const LeftIcon = side === "left" ? ChevronRight : ChevronLeft;
-  const RightIcon = side === "left" ? ChevronLeft : ChevronRight;
-  const Icon = collapsed ? LeftIcon : RightIcon;
+  children,
+  onToggle,
+}: CollapsiblePanelProps) {
+  const Icon = collapsed ? ChevronRight : ChevronLeft;
 
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
+    <div
       className={[
-        "absolute top-1/2 z-[1100] grid h-12 w-6 -translate-y-1/2 place-items-center rounded-full bg-[#223654] text-white shadow-[0_8px_18px_rgba(18,44,86,0.26)] transition hover:bg-[#1a2a43]",
-        side === "left" ? "-right-3" : "-right-3",
+        "relative h-full shrink-0 overflow-visible transition-[width] duration-150 ease-out",
+        collapsed ? "w-[14px]" : expandedWidth,
       ].join(" ")}
     >
-      <Icon className="h-4 w-4" strokeWidth={2.5} />
-    </button>
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className={[
+            "h-full transition-[opacity,transform] duration-150 ease-out",
+            collapsed
+              ? "-translate-x-2 opacity-0 pointer-events-none"
+              : "translate-x-0 opacity-100",
+          ].join(" ")}
+        >
+          {children}
+        </div>
+
+        <div
+          aria-hidden="true"
+          className={[
+            "absolute inset-y-0 right-0 w-[14px] border-x border-[#cfd9e7] bg-[#e9eef5] transition-opacity duration-100",
+            collapsed ? "opacity-100" : "pointer-events-none opacity-0",
+          ].join(" ")}
+        />
+      </div>
+
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        onClick={onToggle}
+        className="absolute right-[-8px] top-1/2 z-[1100] grid h-[64px] w-[16px] -translate-y-1/2 place-items-center rounded-r-[4px] border border-l-0 border-[#314765] bg-[#263b5c] text-[#c6d2e4] shadow-[0_5px_12px_rgba(25,48,82,0.28)] transition-[background-color,transform] duration-100 hover:bg-[#1e304b] active:scale-95"
+      >
+        <Icon className="h-4 w-4" strokeWidth={2.8} />
+      </button>
+    </div>
   );
 }
 
@@ -65,56 +90,42 @@ export function ManagementMonitorWorkspace() {
     useState(false);
 
   return (
-    <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-w-[1380px] overflow-hidden">
+    <div className="flex h-[calc(100vh-var(--st-topbar-height))] min-w-[1180px] overflow-hidden">
       <ManagementRail />
 
-      <div className="relative flex h-full shrink-0">
-        {!accountPanelCollapsed ? <AccountTree compact /> : null}
-
-        <div
-          className={[
-            "relative h-full shrink-0 transition-all duration-200",
-            accountPanelCollapsed ? "w-0" : "w-0",
-          ].join(" ")}
-        >
-          <CollapseToggle
-            collapsed={accountPanelCollapsed}
-            side="left"
-            label={
-              accountPanelCollapsed
-                ? "Expand account list panel"
-                : "Collapse account list panel"
-            }
-            onClick={() =>
-              setAccountPanelCollapsed((value) => !value)
-            }
-          />
+      <CollapsiblePanel
+        expandedWidth="w-[300px]"
+        collapsed={accountPanelCollapsed}
+        label={
+          accountPanelCollapsed
+            ? "Expand account list panel"
+            : "Collapse account list panel"
+        }
+        onToggle={() =>
+          setAccountPanelCollapsed((value) => !value)
+        }
+      >
+        <div className="h-full w-[300px]">
+          <AccountTree compact />
         </div>
-      </div>
+      </CollapsiblePanel>
 
-      <div className="relative flex h-full shrink-0">
-        {!devicePanelCollapsed ? <ManagedDeviceList /> : null}
-
-        <div
-          className={[
-            "relative h-full shrink-0 transition-all duration-200",
-            devicePanelCollapsed ? "w-0" : "w-0",
-          ].join(" ")}
-        >
-          <CollapseToggle
-            collapsed={devicePanelCollapsed}
-            side="right"
-            label={
-              devicePanelCollapsed
-                ? "Expand device list panel"
-                : "Collapse device list panel"
-            }
-            onClick={() =>
-              setDevicePanelCollapsed((value) => !value)
-            }
-          />
+      <CollapsiblePanel
+        expandedWidth="w-[455px]"
+        collapsed={devicePanelCollapsed}
+        label={
+          devicePanelCollapsed
+            ? "Expand device list panel"
+            : "Collapse device list panel"
+        }
+        onToggle={() =>
+          setDevicePanelCollapsed((value) => !value)
+        }
+      >
+        <div className="h-full w-[455px]">
+          <ManagedDeviceList />
         </div>
-      </div>
+      </CollapsiblePanel>
 
       <section className="relative min-w-0 flex-1 overflow-hidden">
         <TrackingMapClient />
