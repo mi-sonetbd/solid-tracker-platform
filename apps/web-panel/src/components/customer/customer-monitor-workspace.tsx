@@ -281,7 +281,7 @@ function CustomerObjectPanel({
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ff3152] text-white shadow-[0_2px_7px_rgba(255,49,82,0.22)]">
                         <CarFront
                           className="h-5 w-5"
-                          fill="currentColor"
+                          strokeWidth={2.2}
                         />
                       </div>
 
@@ -426,7 +426,15 @@ export function CustomerMonitorWorkspace({
         />
       </CollapsibleObjectPanel>
 
-      <section className="relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]">
+      <section
+        className={[
+          "relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]",
+          "[&_.leaflet-right]:transition-[right] [&_.leaflet-right]:duration-150",
+          drawerOpen && selectedVehicle
+            ? "[&_.leaflet-right]:right-[350px]"
+            : "[&_.leaflet-right]:right-0",
+        ].join(" ")}
+      >
         <TrackingMapClient selectedPosition={null} />
 
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2">
@@ -452,7 +460,14 @@ export function CustomerMonitorWorkspace({
           </button>
         </div>
 
-        <div className="absolute right-3 top-4 z-[1000] flex flex-col gap-2">
+        <div
+          className={[
+            "absolute top-4 z-[1000] flex flex-col gap-2 transition-[right] duration-150",
+            drawerOpen && selectedVehicle
+              ? "right-[362px]"
+              : "right-3",
+          ].join(" ")}
+        >
           {mapTools.map((Icon, index) => (
             <button
               key={index}
