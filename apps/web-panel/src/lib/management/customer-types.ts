@@ -67,6 +67,7 @@ export type CreateIndividualCustomerInput = {
   dateOfBirth?: string;
   emergencyContactName?: string;
   emergencyContactMobile?: string;
+  managingDealerId?: string;
 };
 
 export type CreateOrganizationCustomerInput = {
@@ -79,6 +80,7 @@ export type CreateOrganizationCustomerInput = {
   contactPersonName?: string;
   contactMobile?: string;
   contactEmail?: string;
+  managingDealerId?: string;
 };
 
 export type CreateCustomerOwnerInput = {
@@ -87,6 +89,7 @@ export type CreateCustomerOwnerInput = {
   email?: string;
   password?: string;
   roleCode: "CUSTOMER_OWNER";
+  isPrimary: true;
 };
 
 export type CustomerMemberUser = {

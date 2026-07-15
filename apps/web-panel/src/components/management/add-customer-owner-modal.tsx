@@ -9,10 +9,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import {
-  useState,
-  type FormEvent,
-} from "react";
+import { useState, type FormEvent } from "react";
 import type {
   CreateCustomerOwnerInput,
   CustomerSummary,
@@ -53,13 +50,10 @@ export function AddCustomerOwnerModal({
   const [mobileNumber, setMobileNumber] = useState(
     customer.primaryMobile ?? "",
   );
-  const [email, setEmail] = useState(
-    customer.primaryEmail ?? "",
-  );
+  const [email, setEmail] = useState(customer.primaryEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordVisible, setPasswordVisible] =
-    useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -109,6 +103,7 @@ export function AddCustomerOwnerModal({
       email: email.trim() || undefined,
       password: existingUser ? undefined : password,
       roleCode: "CUSTOMER_OWNER",
+      isPrimary: true,
     };
 
     setSubmitting(true);
@@ -126,8 +121,7 @@ export function AddCustomerOwnerModal({
       );
 
       const result = (await response.json()) as
-        | ProvisionedCustomerMember
-        | ManagementApiError;
+        ProvisionedCustomerMember | ManagementApiError;
 
       if (!response.ok) {
         setError(
@@ -140,9 +134,7 @@ export function AddCustomerOwnerModal({
 
       onCreated(result as ProvisionedCustomerMember);
     } catch {
-      setError(
-        "The web panel could not reach the Customer member service.",
-      );
+      setError("The web panel could not reach the Customer member service.");
     } finally {
       setSubmitting(false);
     }
@@ -153,10 +145,7 @@ export function AddCustomerOwnerModal({
       className="fixed inset-0 z-[2400] grid place-items-center bg-[#17345f]/48 p-5"
       role="presentation"
       onMouseDown={(event) => {
-        if (
-          event.target === event.currentTarget &&
-          !submitting
-        ) {
+        if (event.target === event.currentTarget && !submitting) {
           onClose();
         }
       }}
@@ -226,7 +215,8 @@ export function AddCustomerOwnerModal({
                   Create new login
                 </span>
                 <span className="mt-1 block text-[10px] leading-4 text-[#7c8ba5]">
-                  Creates a new Customer Owner identity with a temporary password.
+                  Creates a new Customer Owner identity with a temporary
+                  password.
                 </span>
               </button>
 
@@ -244,7 +234,8 @@ export function AddCustomerOwnerModal({
                   Attach existing user
                 </span>
                 <span className="mt-1 block text-[10px] leading-4 text-[#7c8ba5]">
-                  Attaches the existing Solid Tracker identity matched by mobile.
+                  Attaches the existing Solid Tracker identity matched by
+                  mobile.
                 </span>
               </button>
             </div>
@@ -258,9 +249,7 @@ export function AddCustomerOwnerModal({
                 minLength={2}
                 maxLength={160}
                 value={fullName}
-                onChange={(event) =>
-                  setFullName(event.target.value)
-                }
+                onChange={(event) => setFullName(event.target.value)}
                 className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
               />
             </label>
@@ -274,9 +263,7 @@ export function AddCustomerOwnerModal({
                 type="tel"
                 maxLength={30}
                 value={mobileNumber}
-                onChange={(event) =>
-                  setMobileNumber(event.target.value)
-                }
+                onChange={(event) => setMobileNumber(event.target.value)}
                 className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
               />
             </label>
@@ -312,29 +299,21 @@ export function AddCustomerOwnerModal({
                   <span className="relative mt-2 block">
                     <input
                       required
-                      type={
-                        passwordVisible ? "text" : "password"
-                      }
+                      type={passwordVisible ? "text" : "password"}
                       minLength={12}
                       maxLength={200}
                       autoComplete="new-password"
                       value={password}
-                      onChange={(event) =>
-                        setPassword(event.target.value)
-                      }
+                      onChange={(event) => setPassword(event.target.value)}
                       className="h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 pr-10 text-[12px] outline-none focus:border-[#357cf4]"
                     />
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setPasswordVisible((value) => !value)
-                      }
+                      onClick={() => setPasswordVisible((value) => !value)}
                       className="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#71819c]"
                       aria-label={
-                        passwordVisible
-                          ? "Hide password"
-                          : "Show password"
+                        passwordVisible ? "Hide password" : "Show password"
                       }
                     >
                       {passwordVisible ? (
@@ -352,15 +331,11 @@ export function AddCustomerOwnerModal({
                   </span>
                   <input
                     required
-                    type={
-                      passwordVisible ? "text" : "password"
-                    }
+                    type={passwordVisible ? "text" : "password"}
                     minLength={12}
                     maxLength={200}
                     value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(event.target.value)
-                    }
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -371,9 +346,8 @@ export function AddCustomerOwnerModal({
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#357cf4]" />
               <p className="text-[10px] leading-5 text-[#52698e]">
                 This login receives <strong>CUSTOMER_OWNER</strong>
-                only within this Customer scope. Customer Owners route
-                to the Customer web panel and cannot access Platform or
-                Dealer records.
+                only within this Customer scope. Customer Owners route to the
+                Customer web panel and cannot access Platform or Dealer records.
               </p>
             </div>
           </div>

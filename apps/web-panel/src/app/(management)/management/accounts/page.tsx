@@ -8,22 +8,21 @@ import { requireManagementSession } from "@/lib/auth/server-session";
 export default async function ManagementAccountsPage() {
   const session = await requireManagementSession();
   const permissions = new Set(session.user.permissions);
+  const platformWorkspace = canManageDealers(session.workspace);
 
   return (
     <AccountManagementWorkspace
       workspace={session.workspace}
-      canCreateDealer={
-        canManageDealers(session.workspace) &&
-        permissions.has("dealer.manage")
-      }
+      canCreateDealer={platformWorkspace && permissions.has("dealer.manage")}
       canViewDealers={permissions.has("dealer.view")}
       canCreateCustomer={
         canManageCustomers(session.workspace) &&
-        permissions.has("customer.manage")
+        permissions.has("customer.create")
       }
-      canManageDealerStaff={permissions.has(
-        "dealer.staff.manage",
-      )}
+      canViewCustomers={permissions.has("customer.view")}
+      canManageDealerStaff={permissions.has("dealer.staff.manage")}
+      canManageCustomerMembers={permissions.has("customer.update")}
+      canChooseCustomerAssignment={platformWorkspace}
     />
   );
 }

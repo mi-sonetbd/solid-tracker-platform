@@ -6,10 +6,10 @@ import {
   withManagementSession,
 } from "@/lib/management/management-bff-session";
 
-function optionalText(
-  value: unknown,
-  maximumLength: number,
-) {
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function optionalText(value: unknown, maximumLength: number) {
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -23,9 +23,7 @@ function optionalText(
   if (!normalized) return undefined;
 
   if (normalized.length > maximumLength) {
-    throw new Error(
-      `A text field exceeds ${maximumLength} characters.`,
-    );
+    throw new Error(`A text field exceeds ${maximumLength} characters.`);
   }
 
   return normalized;
@@ -48,41 +46,31 @@ function requiredText(
   return normalized;
 }
 
-function parseInput(
-  payload: unknown,
-): CreateIndividualCustomerInput {
+function parseInput(payload: unknown): CreateIndividualCustomerInput {
   if (!payload || typeof payload !== "object") {
     throw new Error("The Customer request body is invalid.");
   }
 
   const value = payload as Record<string, unknown>;
   const primaryEmail = optionalText(value.primaryEmail, 254);
+  const managingDealerId = optionalText(value.managingDealerId, 36);
 
-  if (
-    primaryEmail &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(primaryEmail)
-  ) {
+  if (primaryEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(primaryEmail)) {
     throw new Error("Enter a valid Customer email address.");
+  }
+
+  if (managingDealerId && !uuidPattern.test(managingDealerId)) {
+    throw new Error("The selected Dealer identifier is invalid.");
   }
 
   return {
     fullName: requiredText(value.fullName, "Full name", 2, 160),
-    primaryMobile: requiredText(
-      value.primaryMobile,
-      "Primary mobile",
-      5,
-      30,
-    ),
+    primaryMobile: requiredText(value.primaryMobile, "Primary mobile", 5, 30),
     primaryEmail,
     dateOfBirth: optionalText(value.dateOfBirth, 30),
-    emergencyContactName: optionalText(
-      value.emergencyContactName,
-      160,
-    ),
-    emergencyContactMobile: optionalText(
-      value.emergencyContactMobile,
-      30,
-    ),
+    emergencyContactName: optionalText(value.emergencyContactName, 160),
+    emergencyContactMobile: optionalText(value.emergencyContactMobile, 30),
+    managingDealerId,
   };
 }
 

@@ -9,10 +9,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import type {
   CustomerMember,
   CustomerSummary,
@@ -57,24 +54,19 @@ export function CustomerMembersModal({
 }: CustomerMembersModalProps) {
   const [members, setMembers] = useState<CustomerMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [localRefreshVersion, setLocalRefreshVersion] =
-    useState(0);
+  const [localRefreshVersion, setLocalRefreshVersion] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
 
-    void fetch(
-      `/api/management/customers/${customer.id}/members`,
-      {
-        cache: "no-store",
-        signal: controller.signal,
-      },
-    )
+    void fetch(`/api/management/customers/${customer.id}/members`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then(async (response) => {
         const result = (await response.json()) as
-          | CustomerMember[]
-          | ManagementApiError;
+          CustomerMember[] | ManagementApiError;
 
         if (!response.ok) {
           throw new Error(
@@ -92,8 +84,7 @@ export function CustomerMembersModal({
       .catch((reason: unknown) => {
         if (
           controller.signal.aborted ||
-          (reason instanceof DOMException &&
-            reason.name === "AbortError")
+          (reason instanceof DOMException && reason.name === "AbortError")
         ) {
           return;
         }
@@ -162,10 +153,7 @@ export function CustomerMembersModal({
               className="grid h-9 w-9 place-items-center rounded-[3px] border border-[#cfd8e7] text-[#52698e]"
             >
               <RefreshCw
-                className={[
-                  "h-4 w-4",
-                  loading ? "animate-spin" : "",
-                ].join(" ")}
+                className={["h-4 w-4", loading ? "animate-spin" : ""].join(" ")}
               />
             </button>
 
@@ -226,10 +214,7 @@ export function CustomerMembersModal({
                       "Account",
                       "Last login",
                     ].map((heading) => (
-                      <th
-                        key={heading}
-                        className="px-4 py-3 font-semibold"
-                      >
+                      <th key={heading} className="px-4 py-3 font-semibold">
                         {heading}
                       </th>
                     ))}
@@ -271,20 +256,14 @@ export function CustomerMembersModal({
                         )}
                       </td>
 
-                      <td className="px-4 py-4">
-                        {member.status}
-                      </td>
+                      <td className="px-4 py-4">{member.status}</td>
 
-                      <td className="px-4 py-4">
-                        {member.user.status}
-                      </td>
+                      <td className="px-4 py-4">{member.user.status}</td>
 
                       <td className="px-4 py-4">
                         <span className="flex items-center gap-1">
                           <CalendarClock className="h-3.5 w-3.5" />
-                          {formatDate(
-                            member.user.lastLoginAt,
-                          )}
+                          {formatDate(member.user.lastLoginAt)}
                         </span>
                       </td>
                     </tr>

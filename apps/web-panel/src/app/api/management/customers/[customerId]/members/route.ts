@@ -18,10 +18,7 @@ type RouteContext = {
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function optionalText(
-  value: unknown,
-  maximumLength: number,
-) {
+function optionalText(value: unknown, maximumLength: number) {
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -35,9 +32,7 @@ function optionalText(
   if (!normalized) return undefined;
 
   if (normalized.length > maximumLength) {
-    throw new Error(
-      `A text field exceeds ${maximumLength} characters.`,
-    );
+    throw new Error(`A text field exceeds ${maximumLength} characters.`);
   }
 
   return normalized;
@@ -74,10 +69,7 @@ function parseOwner(payload: unknown): CreateCustomerOwnerInput {
   const email = optionalText(value.email, 254);
   const password = optionalText(value.password, 200);
 
-  if (
-    email &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Enter a valid owner email address.");
   }
 
@@ -94,28 +86,16 @@ function parseOwner(payload: unknown): CreateCustomerOwnerInput {
   }
 
   return {
-    fullName: requiredText(
-      value.fullName,
-      "Owner full name",
-      2,
-      160,
-    ),
-    mobileNumber: requiredText(
-      value.mobileNumber,
-      "Owner mobile",
-      5,
-      30,
-    ),
+    fullName: requiredText(value.fullName, "Owner full name", 2, 160),
+    mobileNumber: requiredText(value.mobileNumber, "Owner mobile", 5, 30),
     email,
     password,
     roleCode: "CUSTOMER_OWNER",
+    isPrimary: true,
   };
 }
 
-export async function GET(
-  request: NextRequest,
-  context: RouteContext,
-) {
+export async function GET(request: NextRequest, context: RouteContext) {
   const customerId = await customerIdFrom(context);
 
   if (!customerId) {
@@ -130,10 +110,7 @@ export async function GET(
   );
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext,
-) {
+export async function POST(request: NextRequest, context: RouteContext) {
   const customerId = await customerIdFrom(context);
 
   if (!customerId) {
@@ -157,10 +134,6 @@ export async function POST(
   }
 
   return withManagementSession(request, (accessToken) =>
-    backendCreateCustomerOwner(
-      accessToken,
-      customerId,
-      input,
-    ),
+    backendCreateCustomerOwner(accessToken, customerId, input),
   );
 }

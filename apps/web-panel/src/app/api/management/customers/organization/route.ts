@@ -6,10 +6,10 @@ import {
   withManagementSession,
 } from "@/lib/management/management-bff-session";
 
-function optionalText(
-  value: unknown,
-  maximumLength: number,
-) {
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function optionalText(value: unknown, maximumLength: number) {
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -23,9 +23,7 @@ function optionalText(
   if (!normalized) return undefined;
 
   if (normalized.length > maximumLength) {
-    throw new Error(
-      `A text field exceeds ${maximumLength} characters.`,
-    );
+    throw new Error(`A text field exceeds ${maximumLength} characters.`);
   }
 
   return normalized;
@@ -48,9 +46,7 @@ function requiredText(
   return normalized;
 }
 
-function parseInput(
-  payload: unknown,
-): CreateOrganizationCustomerInput {
+function parseInput(payload: unknown): CreateOrganizationCustomerInput {
   if (!payload || typeof payload !== "object") {
     throw new Error("The Customer request body is invalid.");
   }
@@ -58,47 +54,29 @@ function parseInput(
   const value = payload as Record<string, unknown>;
   const primaryEmail = optionalText(value.primaryEmail, 254);
   const contactEmail = optionalText(value.contactEmail, 254);
+  const managingDealerId = optionalText(value.managingDealerId, 36);
 
   for (const email of [primaryEmail, contactEmail]) {
-    if (
-      email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error("Enter a valid email address.");
     }
   }
 
+  if (managingDealerId && !uuidPattern.test(managingDealerId)) {
+    throw new Error("The selected Dealer identifier is invalid.");
+  }
+
   return {
-    legalName: requiredText(
-      value.legalName,
-      "Legal name",
-      2,
-      200,
-    ),
-    displayName: requiredText(
-      value.displayName,
-      "Display name",
-      2,
-      160,
-    ),
-    primaryMobile: requiredText(
-      value.primaryMobile,
-      "Primary mobile",
-      5,
-      30,
-    ),
+    legalName: requiredText(value.legalName, "Legal name", 2, 200),
+    displayName: requiredText(value.displayName, "Display name", 2, 160),
+    primaryMobile: requiredText(value.primaryMobile, "Primary mobile", 5, 30),
     primaryEmail,
-    registrationNumber: optionalText(
-      value.registrationNumber,
-      100,
-    ),
+    registrationNumber: optionalText(value.registrationNumber, 100),
     taxReference: optionalText(value.taxReference, 100),
-    contactPersonName: optionalText(
-      value.contactPersonName,
-      160,
-    ),
+    contactPersonName: optionalText(value.contactPersonName, 160),
     contactMobile: optionalText(value.contactMobile, 30),
     contactEmail,
+    managingDealerId,
   };
 }
 

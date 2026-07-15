@@ -24,17 +24,11 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 function errorMessage(payload: unknown, fallback: string) {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "message" in payload
-  ) {
+  if (payload && typeof payload === "object" && "message" in payload) {
     const value = (payload as { message?: unknown }).message;
 
     if (Array.isArray(value)) {
-      return value
-        .filter((item) => typeof item === "string")
-        .join(" ");
+      return value.filter((item) => typeof item === "string").join(" ");
     }
 
     if (typeof value === "string") {
@@ -51,18 +45,15 @@ async function customerRequest<T>(
   init: RequestInit,
 ): Promise<ManagementBackendResult<T>> {
   try {
-    const response = await fetch(
-      `${authConfig.apiBaseUrl}${path}`,
-      {
-        ...init,
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          ...init.headers,
-        },
+    const response = await fetch(`${authConfig.apiBaseUrl}${path}`, {
+      ...init,
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        ...init.headers,
       },
-    );
+    });
 
     const payload = await parseResponse(response);
 
@@ -103,6 +94,7 @@ export function backendListCustomers(
     search?: string;
     customerType?: string;
     status?: string;
+    managingDealerId?: string;
   },
 ) {
   const parameters = new URLSearchParams({
@@ -115,6 +107,9 @@ export function backendListCustomers(
     parameters.set("customerType", query.customerType);
   }
   if (query.status) parameters.set("status", query.status);
+  if (query.managingDealerId) {
+    parameters.set("managingDealerId", query.managingDealerId);
+  }
 
   return customerRequest<CustomerListResponse>(
     accessToken,

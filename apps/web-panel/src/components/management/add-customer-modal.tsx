@@ -3,28 +3,30 @@
 import {
   Building2,
   LoaderCircle,
+  Network,
+  ShieldCheck,
   UserRound,
   X,
 } from "lucide-react";
-import {
-  useState,
-  type FormEvent,
-} from "react";
+import { useState, type FormEvent } from "react";
+import type {
+  DealerSummary,
+  ManagementApiError,
+} from "@/lib/management/dealer-types";
 import type {
   CreateIndividualCustomerInput,
   CreateOrganizationCustomerInput,
   CustomerSummary,
 } from "@/lib/management/customer-types";
-import type { ManagementApiError } from "@/lib/management/dealer-types";
 
 type CustomerType = "INDIVIDUAL" | "ORGANIZATION";
+type AssignmentMode = "DIRECT" | "DEALER";
 
-type AddDirectCustomerModalProps = {
+type AddCustomerModalProps = {
+  dealers: DealerSummary[];
+  canChooseAssignment: boolean;
   onClose: () => void;
-  onCreated: (
-    customer: CustomerSummary,
-    provisionOwner: boolean,
-  ) => void;
+  onCreated: (customer: CustomerSummary, provisionOwner: boolean) => void;
 };
 
 function optional(value: string) {
@@ -32,36 +34,50 @@ function optional(value: string) {
   return normalized || undefined;
 }
 
-export function AddDirectCustomerModal({
+export function AddCustomerModal({
+  dealers,
+  canChooseAssignment,
   onClose,
   onCreated,
-}: AddDirectCustomerModalProps) {
-  const [customerType, setCustomerType] =
-    useState<CustomerType>("INDIVIDUAL");
+}: AddCustomerModalProps) {
+  const fixedDealer = canChooseAssignment ? null : (dealers[0] ?? null);
+  const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>(
+    canChooseAssignment ? "DIRECT" : "DEALER",
+  );
+  const [managingDealerId, setManagingDealerId] = useState(
+    fixedDealer?.id ?? "",
+  );
+  const [customerType, setCustomerType] = useState<CustomerType>("INDIVIDUAL");
   const [fullName, setFullName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [primaryMobile, setPrimaryMobile] = useState("");
   const [primaryEmail, setPrimaryEmail] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [emergencyContactName, setEmergencyContactName] =
-    useState("");
-  const [emergencyContactMobile, setEmergencyContactMobile] =
-    useState("");
-  const [registrationNumber, setRegistrationNumber] =
-    useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactMobile, setEmergencyContactMobile] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [taxReference, setTaxReference] = useState("");
-  const [contactPersonName, setContactPersonName] =
-    useState("");
+  const [contactPersonName, setContactPersonName] = useState("");
   const [contactMobile, setContactMobile] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [provisionOwner, setProvisionOwner] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedDealerId =
+    assignmentMode === "DEALER"
+      ? (fixedDealer?.id ?? managingDealerId)
+      : undefined;
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    if (assignmentMode === "DEALER" && !selectedDealerId) {
+      setError("Select the Dealer that will manage this Customer.");
+      return;
+    }
 
     if (primaryMobile.trim().length < 5) {
       setError("Enter a valid primary mobile number.");
@@ -69,9 +85,7 @@ export function AddDirectCustomerModal({
     }
 
     let endpoint: string;
-    let body:
-      | CreateIndividualCustomerInput
-      | CreateOrganizationCustomerInput;
+    let body: CreateIndividualCustomerInput | CreateOrganizationCustomerInput;
 
     if (customerType === "INDIVIDUAL") {
       if (fullName.trim().length < 2) {
@@ -85,21 +99,13 @@ export function AddDirectCustomerModal({
         primaryMobile: primaryMobile.trim(),
         primaryEmail: optional(primaryEmail),
         dateOfBirth: optional(dateOfBirth),
-        emergencyContactName: optional(
-          emergencyContactName,
-        ),
-        emergencyContactMobile: optional(
-          emergencyContactMobile,
-        ),
+        emergencyContactName: optional(emergencyContactName),
+        emergencyContactMobile: optional(emergencyContactMobile),
+        managingDealerId: selectedDealerId,
       };
     } else {
-      if (
-        legalName.trim().length < 2 ||
-        displayName.trim().length < 2
-      ) {
-        setError(
-          "Organization legal name and display name are required.",
-        );
+      if (legalName.trim().length < 2 || displayName.trim().length < 2) {
+        setError("Organization legal name and display name are required.");
         return;
       }
 
@@ -114,6 +120,7 @@ export function AddDirectCustomerModal({
         contactPersonName: optional(contactPersonName),
         contactMobile: optional(contactMobile),
         contactEmail: optional(contactEmail),
+        managingDealerId: selectedDealerId,
       };
     }
 
@@ -129,23 +136,18 @@ export function AddDirectCustomerModal({
       });
 
       const result = (await response.json()) as
-        | CustomerSummary
-        | ManagementApiError;
+        CustomerSummary | ManagementApiError;
 
       if (!response.ok) {
         setError(
-          "message" in result
-            ? result.message
-            : "Direct Customer creation failed.",
+          "message" in result ? result.message : "Customer creation failed.",
         );
         return;
       }
 
       onCreated(result as CustomerSummary, provisionOwner);
     } catch {
-      setError(
-        "The web panel could not reach the Customer service.",
-      );
+      setError("The web panel could not reach the Customer service.");
     } finally {
       setSubmitting(false);
     }
@@ -156,10 +158,7 @@ export function AddDirectCustomerModal({
       className="fixed inset-0 z-[2300] grid place-items-center bg-[#17345f]/48 p-5"
       role="presentation"
       onMouseDown={(event) => {
-        if (
-          event.target === event.currentTarget &&
-          !submitting
-        ) {
+        if (event.target === event.currentTarget && !submitting) {
           onClose();
         }
       }}
@@ -167,19 +166,19 @@ export function AddDirectCustomerModal({
       <section
         role="dialog"
         aria-modal="true"
-        aria-labelledby="direct-customer-title"
-        className="flex max-h-[94vh] w-full max-w-[820px] flex-col overflow-hidden rounded-[8px] bg-white shadow-[0_28px_80px_rgba(18,44,86,0.32)]"
+        aria-labelledby="add-customer-title"
+        className="flex max-h-[94vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[8px] bg-white shadow-[0_28px_80px_rgba(18,44,86,0.32)]"
       >
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#dfe6ef] px-6">
           <div>
             <h2
-              id="direct-customer-title"
+              id="add-customer-title"
               className="text-[17px] font-semibold text-[#344b72]"
             >
-              Add Direct Customer
+              Add Customer
             </h2>
             <p className="mt-0.5 text-[11px] text-[#7c8ba5]">
-              Platform-managed Customer without a Dealer assignment.
+              Create one Customer and choose Platform or Dealer management.
             </p>
           </div>
 
@@ -187,8 +186,8 @@ export function AddDirectCustomerModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            aria-label="Close Direct Customer dialog"
-            className="text-[#71819c]"
+            aria-label="Close Add Customer dialog"
+            className="text-[#71819c] disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -207,6 +206,91 @@ export function AddDirectCustomerModal({
                 {error}
               </div>
             ) : null}
+
+            <section className="md:col-span-2 rounded-[6px] border border-[#dfe6ef] bg-[#f8faff] p-4">
+              <div className="flex items-center gap-2">
+                <Network className="h-4 w-4 text-[#357cf4]" />
+                <h3 className="text-[12px] font-semibold text-[#405779]">
+                  Customer assignment
+                </h3>
+              </div>
+
+              {canChooseAssignment ? (
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentMode("DIRECT")}
+                    className={[
+                      "rounded-[5px] border p-4 text-left transition",
+                      assignmentMode === "DIRECT"
+                        ? "border-[#357cf4] bg-[#edf4ff]"
+                        : "border-[#d7e0ec] bg-white",
+                    ].join(" ")}
+                  >
+                    <span className="block text-[12px] font-semibold text-[#405779]">
+                      Platform / Direct
+                    </span>
+                    <span className="mt-1 block text-[10px] leading-4 text-[#7c8ba5]">
+                      Solid Tracker directly manages this Customer. No Dealer is
+                      assigned.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={dealers.length === 0}
+                    onClick={() => setAssignmentMode("DEALER")}
+                    className={[
+                      "rounded-[5px] border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50",
+                      assignmentMode === "DEALER"
+                        ? "border-[#357cf4] bg-[#edf4ff]"
+                        : "border-[#d7e0ec] bg-white",
+                    ].join(" ")}
+                  >
+                    <span className="block text-[12px] font-semibold text-[#405779]">
+                      Dealer-managed
+                    </span>
+                    <span className="mt-1 block text-[10px] leading-4 text-[#7c8ba5]">
+                      Assign this Customer to one Dealer during creation.
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 flex items-start gap-3 rounded-[5px] border border-[#cfe0ff] bg-[#edf4ff] px-4 py-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#357cf4]" />
+                  <p className="text-[10px] leading-5 text-[#52698e]">
+                    This workspace creates Customers only under{" "}
+                    <strong>
+                      {fixedDealer?.name ?? "the authenticated Dealer"}
+                    </strong>
+                    .
+                  </p>
+                </div>
+              )}
+
+              {assignmentMode === "DEALER" && canChooseAssignment ? (
+                <label className="mt-4 block">
+                  <span className="text-[11px] font-semibold text-[#405779]">
+                    Managing Dealer
+                  </span>
+                  <select
+                    required
+                    value={managingDealerId}
+                    onChange={(event) =>
+                      setManagingDealerId(event.target.value)
+                    }
+                    className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] bg-white px-3 text-[12px] outline-none focus:border-[#357cf4]"
+                  >
+                    <option value="">Select Dealer</option>
+                    {dealers.map((dealer) => (
+                      <option key={dealer.id} value={dealer.id}>
+                        {dealer.name} Â· {dealer.dealerProfile.dealerCode}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </section>
 
             <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
               <button
@@ -232,9 +316,7 @@ export function AddDirectCustomerModal({
 
               <button
                 type="button"
-                onClick={() =>
-                  setCustomerType("ORGANIZATION")
-                }
+                onClick={() => setCustomerType("ORGANIZATION")}
                 className={[
                   "flex items-start gap-3 rounded-[5px] border p-4 text-left",
                   customerType === "ORGANIZATION"
@@ -266,9 +348,7 @@ export function AddDirectCustomerModal({
                     minLength={2}
                     maxLength={160}
                     value={fullName}
-                    onChange={(event) =>
-                      setFullName(event.target.value)
-                    }
+                    onChange={(event) => setFullName(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -280,9 +360,7 @@ export function AddDirectCustomerModal({
                   <input
                     type="date"
                     value={dateOfBirth}
-                    onChange={(event) =>
-                      setDateOfBirth(event.target.value)
-                    }
+                    onChange={(event) => setDateOfBirth(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -295,9 +373,7 @@ export function AddDirectCustomerModal({
                     maxLength={160}
                     value={emergencyContactName}
                     onChange={(event) =>
-                      setEmergencyContactName(
-                        event.target.value,
-                      )
+                      setEmergencyContactName(event.target.value)
                     }
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
@@ -312,9 +388,7 @@ export function AddDirectCustomerModal({
                     maxLength={30}
                     value={emergencyContactMobile}
                     onChange={(event) =>
-                      setEmergencyContactMobile(
-                        event.target.value,
-                      )
+                      setEmergencyContactMobile(event.target.value)
                     }
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
@@ -332,9 +406,7 @@ export function AddDirectCustomerModal({
                     minLength={2}
                     maxLength={200}
                     value={legalName}
-                    onChange={(event) =>
-                      setLegalName(event.target.value)
-                    }
+                    onChange={(event) => setLegalName(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -348,9 +420,7 @@ export function AddDirectCustomerModal({
                     minLength={2}
                     maxLength={160}
                     value={displayName}
-                    onChange={(event) =>
-                      setDisplayName(event.target.value)
-                    }
+                    onChange={(event) => setDisplayName(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -363,9 +433,7 @@ export function AddDirectCustomerModal({
                     maxLength={100}
                     value={registrationNumber}
                     onChange={(event) =>
-                      setRegistrationNumber(
-                        event.target.value,
-                      )
+                      setRegistrationNumber(event.target.value)
                     }
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
@@ -378,9 +446,7 @@ export function AddDirectCustomerModal({
                   <input
                     maxLength={100}
                     value={taxReference}
-                    onChange={(event) =>
-                      setTaxReference(event.target.value)
-                    }
+                    onChange={(event) => setTaxReference(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -393,9 +459,7 @@ export function AddDirectCustomerModal({
                     maxLength={160}
                     value={contactPersonName}
                     onChange={(event) =>
-                      setContactPersonName(
-                        event.target.value,
-                      )
+                      setContactPersonName(event.target.value)
                     }
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
@@ -409,9 +473,7 @@ export function AddDirectCustomerModal({
                     type="tel"
                     maxLength={30}
                     value={contactMobile}
-                    onChange={(event) =>
-                      setContactMobile(event.target.value)
-                    }
+                    onChange={(event) => setContactMobile(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -424,9 +486,7 @@ export function AddDirectCustomerModal({
                     type="email"
                     maxLength={254}
                     value={contactEmail}
-                    onChange={(event) =>
-                      setContactEmail(event.target.value)
-                    }
+                    onChange={(event) => setContactEmail(event.target.value)}
                     className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
                   />
                 </label>
@@ -442,9 +502,7 @@ export function AddDirectCustomerModal({
                 type="tel"
                 maxLength={30}
                 value={primaryMobile}
-                onChange={(event) =>
-                  setPrimaryMobile(event.target.value)
-                }
+                onChange={(event) => setPrimaryMobile(event.target.value)}
                 className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
               />
             </label>
@@ -457,9 +515,7 @@ export function AddDirectCustomerModal({
                 type="email"
                 maxLength={254}
                 value={primaryEmail}
-                onChange={(event) =>
-                  setPrimaryEmail(event.target.value)
-                }
+                onChange={(event) => setPrimaryEmail(event.target.value)}
                 className="mt-2 h-10 w-full rounded-[4px] border border-[#cfd8e7] px-3 text-[12px] outline-none focus:border-[#357cf4]"
               />
             </label>
@@ -468,9 +524,7 @@ export function AddDirectCustomerModal({
               <input
                 type="checkbox"
                 checked={provisionOwner}
-                onChange={(event) =>
-                  setProvisionOwner(event.target.checked)
-                }
+                onChange={(event) => setProvisionOwner(event.target.checked)}
                 className="h-4 w-4 accent-[#357cf4]"
               />
 
@@ -479,7 +533,8 @@ export function AddDirectCustomerModal({
                   Provision Customer Owner after creation
                 </span>
                 <span className="mt-0.5 block text-[10px] text-[#7c8ba5]">
-                  Opens the secure login form immediately after the Customer record is created.
+                  Opens the secure login form immediately after the Customer
+                  record is created.
                 </span>
               </span>
             </label>
