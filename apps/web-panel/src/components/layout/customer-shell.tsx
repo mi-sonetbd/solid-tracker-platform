@@ -51,9 +51,11 @@ export function CustomerShell({
 }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeSection = pathname.startsWith("/alerts")
-    ? "monitor"
-    : resolveSection(pathname);
+  const activeSection =
+    pathname.startsWith("/alerts") ||
+    pathname.startsWith("/tracks")
+      ? "monitor"
+      : resolveSection(pathname);
   const railItems = sectionNavigation[activeSection];
   const showSectionRail = activeSection !== "monitor";
   const menuRef = useRef<HTMLDivElement>(null);

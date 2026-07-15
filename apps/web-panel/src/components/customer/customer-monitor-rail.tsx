@@ -37,8 +37,8 @@ const items = [
     id: "tracks" as const,
     label: "Tracks",
     icon: MapPinned,
-    href: null,
-    operational: false,
+    href: "/tracks",
+    operational: true,
   },
   {
     id: "multi-track" as const,
