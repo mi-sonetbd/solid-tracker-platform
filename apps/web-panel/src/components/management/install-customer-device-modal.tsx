@@ -54,6 +54,93 @@ function optionalNumber(value: string) {
   return Number(value);
 }
 
+async function readDevicePage(
+  baseParameters: URLSearchParams,
+  page: number,
+  signal: AbortSignal,
+): Promise<DeviceListResponse> {
+  const parameters = new URLSearchParams(
+    baseParameters,
+  );
+  parameters.set("page", String(page));
+  parameters.set("pageSize", "100");
+
+  const response = await fetch(
+    `/api/management/devices?${parameters.toString()}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+  const payload = (await response.json()) as
+    | DeviceListResponse
+    | ManagementApiError;
+
+  if (!response.ok) {
+    throw new Error(
+      "message" in payload
+        ? payload.message
+        : "Available tracker loading failed.",
+    );
+  }
+
+  return payload as DeviceListResponse;
+}
+
+async function loadAllDevicePages(
+  baseParameters: URLSearchParams,
+  signal: AbortSignal,
+): Promise<DeviceSummary[]> {
+  const first = await readDevicePage(
+    baseParameters,
+    1,
+    signal,
+  );
+
+  if (first.totalPages <= 1) {
+    return first.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from(
+      {
+        length: first.totalPages - 1,
+      },
+      (_, index) => index + 2,
+    ).map((page) =>
+      readDevicePage(
+        baseParameters,
+        page,
+        signal,
+      ),
+    ),
+  );
+
+  return [
+    ...first.items,
+    ...remainingPages.flatMap(
+      (result) => result.items,
+    ),
+  ];
+}
+
+function isInstallableDevice(
+  device: DeviceSummary,
+) {
+  const activeAssignment =
+    device.vehicleAssignments?.some(
+      (assignment) =>
+        assignment.status === "ACTIVE",
+    ) ?? false;
+
+  return (
+    !activeAssignment &&
+    ["IN_STOCK", "ALLOCATED"].includes(
+      device.lifecycleStatus,
+    )
+  );
+}
+
 export function InstallCustomerDeviceModal({
   customer,
   vehicle,
@@ -81,56 +168,113 @@ export function InstallCustomerDeviceModal({
     if (!canViewDevices) return;
 
     const controller = new AbortController();
-    const parameters = new URLSearchParams({
-      page: "1",
-      pageSize: "100",
-      lifecycleStatus: customer.managingDealerId
-        ? "ALLOCATED"
-        : "IN_STOCK",
-    });
+
+    const customerOwnedParameters =
+      new URLSearchParams({
+        lifecycleStatus: "ALLOCATED",
+        customerId: customer.id,
+      });
+
+    const stockParameters =
+      new URLSearchParams({
+        lifecycleStatus: customer.managingDealerId
+          ? "ALLOCATED"
+          : "IN_STOCK",
+      });
 
     if (customer.managingDealerId) {
-      parameters.set(
+      stockParameters.set(
         "dealerOrganizationId",
         customer.managingDealerId,
       );
     }
 
-    fetch(`/api/management/devices?${parameters.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as
-          | DeviceListResponse
-          | ManagementApiError;
+    void Promise.all([
+      loadAllDevicePages(
+        customerOwnedParameters,
+        controller.signal,
+      ),
+      loadAllDevicePages(
+        stockParameters,
+        controller.signal,
+      ),
+    ])
+      .then(
+        ([
+          customerOwnedDevices,
+          availableStockDevices,
+        ]) => {
+          if (controller.signal.aborted) return;
 
-        if (!response.ok) {
-          throw new Error(
-            "message" in payload
-              ? payload.message
-              : "Available tracker loading failed.",
+          const merged = new Map<
+            string,
+            DeviceSummary
+          >();
+
+          for (const device of [
+            ...customerOwnedDevices,
+            ...availableStockDevices,
+          ]) {
+            if (isInstallableDevice(device)) {
+              merged.set(device.id, device);
+            }
+          }
+
+          const available = Array.from(
+            merged.values(),
+          ).sort((left, right) => {
+            const leftOwned =
+              left.ownershipHistory?.some(
+                (ownership) =>
+                  ownership.ownerCustomerId ===
+                  customer.id,
+              ) ||
+              left.custodyHistory?.some(
+                (custody) =>
+                  custody.custodianCustomerId ===
+                  customer.id,
+              )
+                ? 0
+                : 1;
+            const rightOwned =
+              right.ownershipHistory?.some(
+                (ownership) =>
+                  ownership.ownerCustomerId ===
+                  customer.id,
+              ) ||
+              right.custodyHistory?.some(
+                (custody) =>
+                  custody.custodianCustomerId ===
+                  customer.id,
+              )
+                ? 0
+                : 1;
+
+            if (leftOwned !== rightOwned) {
+              return leftOwned - rightOwned;
+            }
+
+            return left.deviceCode.localeCompare(
+              right.deviceCode,
+            );
+          });
+
+          setDevices(available);
+          setSelectedDeviceId((current) =>
+            available.some(
+              (device) => device.id === current,
+            )
+              ? current
+              : (available[0]?.id ?? ""),
           );
-        }
-
-        return payload as DeviceListResponse;
-      })
-      .then((payload) => {
-        const available = payload.items.filter(
-          (device) => (device.vehicleAssignments?.length ?? 0) === 0,
-        );
-        setDevices(available);
-        setSelectedDeviceId((current) =>
-          available.some((device) => device.id === current)
-            ? current
-            : (available[0]?.id ?? ""),
-        );
-        setError("");
-      })
+          setError("");
+        },
+      )
       .catch((requestError: unknown) => {
         if (
-          requestError instanceof DOMException &&
-          requestError.name === "AbortError"
+          controller.signal.aborted ||
+          (requestError instanceof DOMException &&
+            requestError.name === "AbortError")
         ) {
           return;
         }
@@ -144,12 +288,15 @@ export function InstallCustomerDeviceModal({
         );
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       });
 
     return () => controller.abort();
   }, [
     canViewDevices,
+    customer.id,
     customer.managingDealerId,
     refreshVersion,
   ]);
@@ -473,9 +620,9 @@ export function InstallCustomerDeviceModal({
 
           {!loading && devices.length === 0 ? (
             <p className="mt-4 rounded-[4px] bg-amber-50 px-4 py-3 text-[11px] font-medium text-amber-800">
-              No installable tracker is available in this Customer&apos;s
-              stock scope. Register Platform inventory or allocate inventory
-              to the managing Dealer from Device Management first.
+              No installable tracker is available. The picker checks Devices
+              already sold or moved to this Customer plus eligible Platform or
+              managing Dealer stock.
             </p>
           ) : null}
 
