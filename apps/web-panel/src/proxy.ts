@@ -15,6 +15,7 @@ const protectedPrefixes = [
   "/dealers",
   "/reports",
   "/settings",
+  "/management",
   "/role-template-pending",
 ];
 

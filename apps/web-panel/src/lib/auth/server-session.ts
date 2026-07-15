@@ -9,6 +9,7 @@ import type {
   WorkspaceKind,
 } from "@/lib/auth/auth-types";
 import {
+  isManagementWorkspace,
   resolveWorkspace,
   workspaceRedirect,
 } from "@/lib/auth/workspace";
@@ -75,6 +76,16 @@ export async function requireCustomerSession() {
   const session = await requireAnySession();
 
   if (session.workspace !== "CUSTOMER") {
+    redirect(workspaceRedirect(session.workspace));
+  }
+
+  return session;
+}
+
+export async function requireManagementSession() {
+  const session = await requireAnySession();
+
+  if (!isManagementWorkspace(session.workspace)) {
     redirect(workspaceRedirect(session.workspace));
   }
 

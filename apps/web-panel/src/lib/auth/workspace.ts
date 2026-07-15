@@ -3,6 +3,13 @@ import type {
   WorkspaceKind,
 } from "@/lib/auth/auth-types";
 
+const managementWorkspaces: WorkspaceKind[] = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "DEALER_MANAGER",
+  "DEALER",
+];
+
 function normalizedRoleCodes(context: BackendAuthContext) {
   return context.roles.map((role) =>
     role.code.trim().toUpperCase().replace(/[\s-]+/g, "_"),
@@ -59,9 +66,19 @@ export function resolveWorkspace(
   return "UNKNOWN";
 }
 
+export function isManagementWorkspace(
+  workspace: WorkspaceKind,
+) {
+  return managementWorkspaces.includes(workspace);
+}
+
 export function workspaceRedirect(workspace: WorkspaceKind) {
   if (workspace === "CUSTOMER") {
     return "/monitor";
+  }
+
+  if (isManagementWorkspace(workspace)) {
+    return "/management/monitor";
   }
 
   return `/role-template-pending?workspace=${encodeURIComponent(
