@@ -126,3 +126,12 @@ order:
 4. verify Customer login and scope;
 5. assign devices to the Customer;
 6. connect real devices to Customer Monitor and Device pages.
+## Windows PowerShell 5.1 output handling
+
+The live-service launcher executes pnpm through `cmd.exe` and uses UTF-8 console
+encoding. This prevents normal framework stderr output from being rendered as a
+PowerShell `NativeCommandError`, and prevents Unicode status symbols from
+appearing as mojibake.
+
+A genuine service failure is still reported through the native process exit
+code.

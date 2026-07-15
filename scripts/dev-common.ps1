@@ -109,17 +109,35 @@ function Start-SolidTrackerWorkspaceProcess {
     $escapedLogPath = $LogPath.Replace("'", "''")
 
     $command = @"
-`$ErrorActionPreference = 'Continue'
+`$ErrorActionPreference = 'Stop'
 `$Host.UI.RawUI.WindowTitle = '$escapedWindowTitle'
 Set-Location '$escapedRepoRoot'
+
+chcp.com 65001 > `$null
+`$utf8 = New-Object System.Text.UTF8Encoding(`$false)
+[Console]::InputEncoding = `$utf8
+[Console]::OutputEncoding = `$utf8
+`$OutputEncoding = `$utf8
+`$env:NO_COLOR = '1'
+`$env:FORCE_COLOR = '0'
+
 Write-Host ''
 Write-Host '$escapedWindowTitle' -ForegroundColor Cyan
 Write-Host 'Live reload is active. Keep this window open.' -ForegroundColor Green
 Write-Host 'Press Ctrl+C to stop this service.' -ForegroundColor Yellow
 Write-Host 'Log: $escapedLogPath' -ForegroundColor DarkGray
 Write-Host ''
-pnpm.cmd --filter '$escapedPackageName' '$escapedScriptName' 2>&1 |
+
+cmd.exe /d /s /c 'pnpm.cmd --filter "$escapedPackageName" "$escapedScriptName" 2>&1' |
     Tee-Object -FilePath '$escapedLogPath' -Append
+
+`$nativeExitCode = `$LASTEXITCODE
+
+if (`$nativeExitCode -ne 0) {
+    Write-Host ''
+    Write-Host "Service exited with code `$nativeExitCode." -ForegroundColor Red
+    exit `$nativeExitCode
+}
 "@
 
     return Start-Process `
