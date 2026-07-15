@@ -15,25 +15,133 @@ type TrackingMapProps = {
   selectedPosition?: TrackingMapPosition | null;
 };
 
-function SelectedPositionFocus({
-  position,
-}: {
-  position: TrackingMapPosition;
-}) {
+type TrackingMapControllerProps = {
+  selectedPosition: TrackingMapPosition | null;
+};
+
+function mapDomIsUsable(
+  map: ReturnType<typeof useMap>,
+  container: HTMLElement,
+) {
+  if (!container.isConnected) {
+    return false;
+  }
+
+  try {
+    const mapPane = map.getPane("mapPane");
+    return Boolean(mapPane?.isConnected);
+  } catch {
+    return false;
+  }
+}
+
+function TrackingMapController({
+  selectedPosition,
+}: TrackingMapControllerProps) {
   const map = useMap();
 
   useEffect(() => {
-    map.setView(
-      [position.latitude, position.longitude],
-      16,
-      {
-        animate: true,
-      },
-    );
+    const container = map.getContainer();
+    let disposed = false;
+    let animationFrame: number | null = null;
+
+    function scheduleResize() {
+      if (disposed) return;
+
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+      }
+
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = null;
+
+        if (
+          disposed ||
+          !mapDomIsUsable(map, container)
+        ) {
+          return;
+        }
+
+        try {
+          map.invalidateSize({
+            animate: false,
+            pan: false,
+            debounceMoveend: true,
+          });
+        } catch {
+          // Navigation, logout, and hot reload may remove the
+          // Leaflet panes before a queued resize callback runs.
+        }
+      });
+    }
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleResize);
+
+    resizeObserver?.observe(container);
+    window.addEventListener("resize", scheduleResize);
+    scheduleResize();
+
+    return () => {
+      disposed = true;
+
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+      }
+
+      resizeObserver?.disconnect();
+      window.removeEventListener(
+        "resize",
+        scheduleResize,
+      );
+
+      // React Leaflet owns map teardown. Never invoke Leaflet's
+      // stop or remove methods from this cleanup.
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!selectedPosition) return;
+
+    const container = map.getContainer();
+    let disposed = false;
+
+    const animationFrame = requestAnimationFrame(() => {
+      if (
+        disposed ||
+        !mapDomIsUsable(map, container)
+      ) {
+        return;
+      }
+
+      try {
+        map.setView(
+          [
+            selectedPosition.latitude,
+            selectedPosition.longitude,
+          ],
+          16,
+          {
+            animate: false,
+          },
+        );
+      } catch {
+        // A route transition may complete between the DOM
+        // guard and the imperative Leaflet call.
+      }
+    });
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(animationFrame);
+
+      // Do not invoke Leaflet during effect cleanup.
+    };
   }, [
     map,
-    position.latitude,
-    position.longitude,
+    selectedPosition,
   ]);
 
   return null;
@@ -49,6 +157,11 @@ export default function TrackingMap({
       minZoom={2}
       zoomControl={false}
       scrollWheelZoom
+      trackResize={false}
+      inertia={false}
+      zoomAnimation={false}
+      fadeAnimation={false}
+      markerZoomAnimation={false}
       className="h-full w-full"
     >
       <TileLayer
@@ -56,27 +169,30 @@ export default function TrackingMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      <TrackingMapController
+        selectedPosition={selectedPosition}
+      />
+
       {selectedPosition ? (
-        <>
-          <SelectedPositionFocus
-            position={selectedPosition}
-          />
-          <CircleMarker
-            center={[
-              selectedPosition.latitude,
-              selectedPosition.longitude,
-            ]}
-            radius={9}
-            pathOptions={{
-              color: "#ffffff",
-              fillColor: "#ff3152",
-              fillOpacity: 1,
-              weight: 3,
-            }}
-          >
-            <Popup>{selectedPosition.label}</Popup>
-          </CircleMarker>
-        </>
+        <CircleMarker
+          key={[
+            selectedPosition.latitude,
+            selectedPosition.longitude,
+          ].join(":")}
+          center={[
+            selectedPosition.latitude,
+            selectedPosition.longitude,
+          ]}
+          radius={9}
+          pathOptions={{
+            color: "#ffffff",
+            fillColor: "#ff3152",
+            fillOpacity: 1,
+            weight: 3,
+          }}
+        >
+          <Popup>{selectedPosition.label}</Popup>
+        </CircleMarker>
       ) : null}
 
       <ZoomControl position="bottomright" />
