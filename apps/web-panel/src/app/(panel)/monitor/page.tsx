@@ -1,16 +1,28 @@
-import { CustomerAssetWorkspace } from "@/components/customer/customer-asset-workspace";
+import { CustomerMonitorWorkspace } from "@/components/customer/customer-monitor-workspace";
 import { requireCustomerSession } from "@/lib/auth/server-session";
 
-export default async function MonitorPage() {
+type MonitorPageProps = {
+  searchParams: Promise<{
+    vehicleId?: string;
+  }>;
+};
+
+export default async function MonitorPage({
+  searchParams,
+}: MonitorPageProps) {
   const session = await requireCustomerSession();
-  const permissions = new Set(session.user.permissions);
+  const permissions = new Set(
+    session.user.permissions,
+  );
+  const parameters = await searchParams;
 
   return (
-    <CustomerAssetWorkspace
-      view="monitor"
+    <CustomerMonitorWorkspace
       canViewVehicles={permissions.has("vehicle.view")}
-      canViewLocation={permissions.has("vehicle.location.view")}
-      canViewHistory={permissions.has("vehicle.history.view")}
+      canViewLocation={permissions.has(
+        "vehicle.location.view",
+      )}
+      initialVehicleId={parameters.vehicleId}
     />
   );
 }

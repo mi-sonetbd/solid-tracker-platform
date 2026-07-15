@@ -1,8 +1,8 @@
-# Customer Scoped Asset Visibility
+# Customer Scoped Assets in the Approved Reference UI
 
-## Customer routes
+## Non-negotiable UI boundary
 
-Real Solid Tracker asset records are now shown on:
+The approved Customer interface is preserved for:
 
 ```text
 /monitor
@@ -11,80 +11,63 @@ Real Solid Tracker asset records are now shown on:
 /fleet
 ```
 
-## Scope boundary
+Customer asset integration replaces only mock data. It does not replace the
+existing navigation, Objects panel, map toolbar, Device table, Report overview,
+or Fleet dashboard.
 
-The browser does not submit a Customer identifier.
+## Authenticated scope
 
-The Customer BFF calls:
-
-```text
-GET /api/v1/vehicles
-```
-
-without `customerId`. The backend derives effective scope from the authenticated
-access token through `AssetAccessService.vehicleWhere(auth)`.
-
-For Customer roles, the backend restricts results to:
+The browser never supplies a Customer ID.
 
 ```text
-customerId IN authenticated customerIds and CUSTOMER role scopes
+GET /api/customer/assets
+    -> GET /api/v1/vehicles
+    -> AssetAccessService.vehicleWhere(auth)
 ```
 
-A Customer cannot select or override another Customer ID in the browser.
+The backend resolves Customer scope from the authenticated token.
 
-## Vehicle projection
+## Monitor behavior
 
-Each scoped vehicle includes its active `VehicleDeviceAssignment`, the assigned
-Device, and the Device Model. Therefore Customer users can see their installed
-tracker through `vehicle.view` without receiving general Platform or Dealer
-inventory access.
+- the existing left Objects panel lists the Customer's real vehicles;
+- installed tracker Device code and IMEI are shown under each vehicle;
+- clicking an object selects it;
+- the existing map remains visible;
+- a reference-style property drawer opens from the right;
+- no coordinates, marker, speed, or online state are fabricated.
 
-This is intentional because Customer roles do not need `device.view` over stock
-inventory.
+The map component accepts an optional real position. When Traccar integration
+provides latitude and longitude, selecting the object automatically focuses the
+map and renders the marker.
 
-## Current page behavior
+## Device behavior
 
-### Monitor
+The approved Device table is preserved and populated with:
 
-- real Customer vehicles;
-- real active tracker assignment;
-- real Device code and IMEI;
-- no fabricated map marker;
-- `No live position yet` until Traccar synchronization.
-
-### Device
-
-- vehicle-to-tracker relationship;
+- Customer vehicle registration;
+- installed Device code;
 - IMEI;
 - Device Model;
-- firmware;
-- lifecycle and assignment status.
+- installation/activation time.
 
-### Fleet
+Unknown subscription fields remain `-` until billing integration exists.
 
-- all scoped Customer vehicles;
-- registration and vehicle identity;
-- installed or missing tracker state.
+## Report behavior
 
-### Report
+The approved overview rings and report table are preserved. Scoped vehicles are
+listed, while tracking-dependent fields remain unavailable until Traccar data
+exists.
 
-- only authenticated Customer vehicles appear;
-- report types are visible;
-- tracking-dependent fields show `No data` and `Traccar pending`.
+## Fleet behavior
 
-## Permissions
-
-```text
-vehicle.view
-vehicle.location.view
-vehicle.history.view
-```
-
-Every Customer route also calls `requireCustomerSession()` on the server.
+The approved Fleet dashboard is preserved. Total Vehicles comes from the
+authenticated Customer scope. Distance, driving time, fuel, motion, and alarm
+statistics remain zero until telemetry and reporting are connected.
 
 ## Next stage
 
-1. synchronize each installed Device with Traccar;
-2. store the Traccar Device mapping;
-3. read latest position and history;
-4. render real markers, speed, ignition, online state, trips, stops, and events.
+1. create authoritative Device-to-Traccar mapping;
+2. synchronize installed tracker IMEI with Traccar;
+3. provide latest scoped position;
+4. feed that position into the existing selection and drawer contract;
+5. connect history, alerts, tracks, and fleet statistics.

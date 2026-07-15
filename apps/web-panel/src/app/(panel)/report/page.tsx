@@ -1,16 +1,18 @@
-import { CustomerAssetWorkspace } from "@/components/customer/customer-asset-workspace";
+import { CustomerReportWorkspace } from "@/components/customer/customer-report-workspace";
 import { requireCustomerSession } from "@/lib/auth/server-session";
 
 export default async function ReportPage() {
   const session = await requireCustomerSession();
-  const permissions = new Set(session.user.permissions);
+  const permissions = new Set(
+    session.user.permissions,
+  );
 
   return (
-    <CustomerAssetWorkspace
-      view="report"
+    <CustomerReportWorkspace
       canViewVehicles={permissions.has("vehicle.view")}
-      canViewLocation={permissions.has("vehicle.location.view")}
-      canViewHistory={permissions.has("vehicle.history.view")}
+      canViewHistory={permissions.has(
+        "vehicle.history.view",
+      )}
     />
   );
 }
