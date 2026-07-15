@@ -137,16 +137,18 @@ export function backendListVehicles(
   query: {
     page: number;
     pageSize: number;
-    customerId: string;
+    customerId?: string;
     search?: string;
   },
 ) {
   const parameters = new URLSearchParams({
     page: String(query.page),
     pageSize: String(query.pageSize),
-    customerId: query.customerId,
   });
 
+  if (query.customerId) {
+    parameters.set("customerId", query.customerId);
+  }
   if (query.search) parameters.set("search", query.search);
 
   return assetRequest<VehicleListResponse>(
