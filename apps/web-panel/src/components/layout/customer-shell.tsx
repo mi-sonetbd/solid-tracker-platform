@@ -51,11 +51,14 @@ export function CustomerShell({
 }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeSection =
+  const isMonitorRoute =
+    pathname.startsWith("/monitor") ||
     pathname.startsWith("/alerts") ||
-    pathname.startsWith("/tracks")
-      ? "monitor"
-      : resolveSection(pathname);
+    pathname.startsWith("/tracks");
+
+  const activeSection = isMonitorRoute
+    ? "monitor"
+    : resolveSection(pathname);
   const railItems = sectionNavigation[activeSection];
   const showSectionRail = activeSection !== "monitor";
   const menuRef = useRef<HTMLDivElement>(null);
@@ -117,7 +120,10 @@ export function CustomerShell({
           className="flex min-w-0 flex-1 items-stretch overflow-x-auto"
         >
           {mainNavigation.map((item) => {
-            const active = isNavigationActive(pathname, item.href);
+            const active =
+              item.href === "/monitor"
+                ? isMonitorRoute
+                : isNavigationActive(pathname, item.href);
             const Icon = item.icon;
 
             return (
@@ -125,10 +131,13 @@ export function CustomerShell({
                 key={item.href}
                 href={item.href}
                 className={[
-                  "flex min-w-[93px] items-center justify-center gap-1.5 border-r border-white/5 px-3 text-[13px] font-semibold transition",
+                  "flex h-full min-w-[93px] self-stretch items-center justify-center gap-1.5 border-r border-white/5 px-3 text-[13px] font-semibold transition",
                   active
-                    ? "bg-[#2766d5] shadow-[inset_0_-3px_0_rgba(255,255,255,0.12)]"
+                    ? "bg-[#2867dd] shadow-none"
                     : "hover:bg-white/10",
+                  active && item.href === "/monitor"
+                    ? "-ml-[18px] pl-[30px]"
+                    : "",
                 ].join(" ")}
               >
                 <Icon

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RadioTower } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 type SolidTrackerWordmarkProps = {
   href?: string;
@@ -32,7 +32,7 @@ export function SolidTrackerWordmark({
       >
         Tracker
       </span>
-      <RadioTower
+      <MapPin data-solid-tracker-logo-icon="map-pin"
         className={[
           "ml-0.5",
           compact ? "h-[17px] w-[17px]" : "h-6 w-6",
