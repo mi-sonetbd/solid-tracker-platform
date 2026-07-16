@@ -75,9 +75,23 @@ export function CustomerMonitorRail({
             <>
               <Icon
                 className="h-6 w-6"
+                fill="none"
+                stroke={
+                  active
+                    ? "#ffffff"
+                    : "currentColor"
+                }
                 strokeWidth={2}
               />
-              <span>{item.label}</span>
+              <span
+                style={
+                  active
+                    ? { color: "#ffffff" }
+                    : undefined
+                }
+              >
+                {item.label}
+              </span>
             </>
           );
 
