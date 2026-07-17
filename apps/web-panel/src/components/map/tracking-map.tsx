@@ -12,6 +12,8 @@ import {
 } from "react";
 import type {
   TrackingMapBasemap,
+  TrackingMapLocationCommand,
+  TrackingMapLocationStatus,
   TrackingMapPosition,
   TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
@@ -22,6 +24,10 @@ type TrackingMapProps = {
   zoomCommand?: TrackingMapZoomCommand | null;
   streetViewActive?: boolean;
   trafficActive?: boolean;
+  myLocationCommand?: TrackingMapLocationCommand | null;
+  onMyLocationStatusChange?: (
+    status: TrackingMapLocationStatus,
+  ) => void;
 };
 
 type MapLoadState =
@@ -200,6 +206,8 @@ export default function TrackingMap({
   zoomCommand = null,
   streetViewActive = false,
   trafficActive = false,
+  myLocationCommand = null,
+  onMyLocationStatusChange,
 }: TrackingMapProps) {
   const containerRef =
     useRef<HTMLDivElement | null>(null);
@@ -215,6 +223,14 @@ export default function TrackingMap({
     );
   const trafficLayerRef =
     useRef<google.maps.TrafficLayer | null>(
+      null,
+    );
+  const myLocationCircleRef =
+    useRef<google.maps.Circle | null>(
+      null,
+    );
+  const myLocationInfoWindowRef =
+    useRef<google.maps.InfoWindow | null>(
       null,
     );
   const streetViewClickListenerRef =
@@ -257,6 +273,10 @@ export default function TrackingMap({
         ? ""
         : "Google Maps API key is not configured.",
     );
+  const [
+    myLocationError,
+    setMyLocationError,
+  ] = useState("");
 
   const clearPositionOverlay =
     useCallback(() => {
@@ -296,6 +316,17 @@ export default function TrackingMap({
           .getStreetView()
           .setVisible(false);
       }
+    }, []);
+
+  const clearMyLocationOverlay =
+    useCallback(() => {
+      myLocationCircleRef.current?.setMap(
+        null,
+      );
+      myLocationCircleRef.current = null;
+
+      myLocationInfoWindowRef.current?.close();
+      myLocationInfoWindowRef.current = null;
     }, []);
 
   useEffect(() => {
@@ -454,6 +485,7 @@ export default function TrackingMap({
 
       resizeObserver?.disconnect();
       clearPositionOverlay();
+      clearMyLocationOverlay();
 
       if (mapRef.current) {
         google.maps.event
@@ -476,7 +508,162 @@ export default function TrackingMap({
     };
   }, [
     apiKey,
+    clearMyLocationOverlay,
     clearPositionOverlay,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (
+      !map ||
+      loadState !== "ready" ||
+      !myLocationCommand
+    ) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      setMyLocationError("");
+    });
+
+    onMyLocationStatusChange?.(
+      "locating",
+    );
+
+    if (!navigator.geolocation) {
+      queueMicrotask(() => {
+        setMyLocationError(
+          "Location access is not supported by this browser.",
+        );
+        onMyLocationStatusChange?.(
+          "error",
+        );
+      });
+
+      return;
+    }
+
+    let cancelled = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) {
+          return;
+        }
+
+        const location:
+          google.maps.LatLngLiteral = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+        clearMyLocationOverlay();
+
+        map.setCenter(location);
+        map.setZoom(
+          Math.max(
+            map.getZoom() ?? 16,
+            16,
+          ),
+        );
+
+        const circle =
+          new google.maps.Circle({
+            map,
+            center: location,
+            radius: Math.max(
+              8,
+              position.coords.accuracy,
+            ),
+            strokeColor: "#ffffff",
+            strokeOpacity: 1,
+            strokeWeight: 3,
+            fillColor: "#357cf4",
+            fillOpacity: 0.88,
+            clickable: true,
+            zIndex: 1300,
+          });
+
+        const content =
+          document.createElement("div");
+
+        content.className =
+          "px-1 py-0.5 text-xs font-semibold text-[#344b72]";
+        content.textContent =
+          "My location";
+
+        const infoWindow =
+          new google.maps.InfoWindow({
+            content,
+            position: location,
+            disableAutoPan: false,
+          });
+
+        const listener =
+          circle.addListener(
+            "click",
+            () => {
+              infoWindow.open({
+                map,
+                shouldFocus: false,
+              });
+            },
+          );
+
+        google.maps.event.addListenerOnce(
+          circle,
+          "map_changed",
+          () => {
+            if (!circle.getMap()) {
+              listener.remove();
+            }
+          },
+        );
+
+        myLocationCircleRef.current =
+          circle;
+        myLocationInfoWindowRef.current =
+          infoWindow;
+
+        onMyLocationStatusChange?.(
+          "ready",
+        );
+      },
+      (error) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message =
+          error.code ===
+          error.PERMISSION_DENIED
+            ? "Location permission was denied."
+            : error.code ===
+                error.POSITION_UNAVAILABLE
+              ? "Current location is unavailable."
+              : "Location request timed out.";
+
+        setMyLocationError(message);
+        onMyLocationStatusChange?.(
+          "error",
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 15000,
+        timeout: 10000,
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    clearMyLocationOverlay,
+    loadState,
+    myLocationCommand,
+    onMyLocationStatusChange,
   ]);
 
   useEffect(() => {
@@ -512,10 +699,15 @@ export default function TrackingMap({
       return;
     }
 
-    trafficLayer.setMap(
-      trafficActive ? map : null,
-    );
+    if (!trafficActive) {
+      trafficLayer.setMap(null);
+      return;
+    }
+
+    trafficLayer.setMap(null);
+    trafficLayer.setMap(map);
   }, [
+    basemap,
     loadState,
     trafficActive,
   ]);
@@ -812,6 +1004,15 @@ export default function TrackingMap({
       loadState === "ready" ? (
         <div className="pointer-events-none absolute bottom-0 left-0 z-[5] bg-white/90 px-1.5 py-0.5 text-[9px] text-[#4d5e79]">
           Tiles Â© Esri
+        </div>
+      ) : null}
+
+      {myLocationError ? (
+        <div
+          role="status"
+          className="pointer-events-none absolute left-1/2 top-3 z-[20] -translate-x-1/2 rounded border border-[#e1b9c1] bg-white px-3 py-2 text-xs font-medium text-[#9d3042] shadow-md"
+        >
+          {myLocationError}
         </div>
       ) : null}
 

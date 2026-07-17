@@ -26,6 +26,8 @@ import { CustomerMapTrafficLightIcon } from "@/components/customer/customer-map-
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
 import type {
   TrackingMapBasemap,
+  TrackingMapLocationCommand,
+  TrackingMapLocationStatus,
   TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
 import {
@@ -146,6 +148,21 @@ export function CustomerTracksWorkspace({
     useState<TrackingMapZoomCommand | null>(
       null,
     );
+  const [
+    myLocationCommand,
+    setMyLocationCommand,
+  ] = useState<TrackingMapLocationCommand | null>(
+    null,
+  );
+  const [
+    myLocationStatus,
+    setMyLocationStatus,
+  ] = useState<TrackingMapLocationStatus>(
+    "idle",
+  );
+  const isMyLocationActive =
+    myLocationStatus === "locating" ||
+    myLocationStatus === "ready";
   const [
     isStreetViewActive,
     setIsStreetViewActive,
@@ -523,6 +540,12 @@ export function CustomerTracksWorkspace({
           trafficActive={
             isTrafficActive
           }
+          myLocationCommand={
+            myLocationCommand
+          }
+          onMyLocationStatusChange={
+            setMyLocationStatus
+          }
         />
 
         <label className="absolute left-3 top-3 z-[1000] flex h-8 w-[220px] items-center rounded-[3px] bg-white px-3 shadow-[0_2px_8px_rgba(35,61,102,0.16)]">
@@ -557,6 +580,21 @@ export function CustomerTracksWorkspace({
                 !canViewLocation && index === 0
               }
               onClick={() => {
+                if (index === 0) {
+                  setIsBasemapMenuOpen(false);
+                  setIsStreetViewActive(false);
+                  setMyLocationStatus(
+                    "locating",
+                  );
+                  setMyLocationCommand(
+                    (current) => ({
+                      id:
+                        (current?.id ?? 0) +
+                        1,
+                    }),
+                  );
+                }
+
                 if (index === 1) {
                   setIsBasemapMenuOpen(false);
                   setIsStreetViewActive(
@@ -578,11 +616,13 @@ export function CustomerTracksWorkspace({
                 }
               }}
               aria-pressed={
-                index === 1
-                  ? isStreetViewActive
-                  : index === 3
-                    ? isTrafficActive
-                    : undefined
+                index === 0
+                  ? isMyLocationActive
+                  : index === 1
+                    ? isStreetViewActive
+                    : index === 3
+                      ? isTrafficActive
+                      : undefined
               }
               aria-expanded={
                 index === 4
@@ -595,30 +635,45 @@ export function CustomerTracksWorkspace({
                   : undefined
               }
               aria-label={
-                index === 1
-                  ? isStreetViewActive
-                    ? "Exit Street View"
-                    : "Select Street View point"
-                  : index === 3
-                    ? isTrafficActive
-                      ? "Hide traffic"
-                      : "Show traffic"
-                    : index === 4
-                      ? "Choose map provider"
-                      : `Track map tool ${index + 1}`
+                index === 0
+                  ? myLocationStatus ===
+                    "locating"
+                    ? "Finding my location"
+                    : "Show my location"
+                  : index === 1
+                    ? isStreetViewActive
+                      ? "Exit Street View"
+                      : "Select Street View point"
+                    : index === 3
+                      ? isTrafficActive
+                        ? "Hide traffic"
+                        : "Show traffic"
+                      : index === 4
+                        ? "Choose map provider"
+                        : `Track map tool ${index + 1}`
               }
               title={
-                index === 1
-                  ? isStreetViewActive
-                    ? "Exit Street View"
-                    : "Select Street View point"
-                  : index === 3
-                    ? isTrafficActive
-                      ? "Hide traffic"
-                      : "Show traffic"
-                    : index === 4
-                      ? "Choose map provider"
-                      : undefined
+                index === 0
+                  ? myLocationStatus ===
+                    "locating"
+                    ? "Finding my location"
+                    : "Show my location"
+                  : index === 1
+                    ? isStreetViewActive
+                      ? "Exit Street View"
+                      : "Select Street View point"
+                    : index === 3
+                      ? isTrafficActive
+                        ? "Hide traffic"
+                        : "Show traffic"
+                      : index === 4
+                        ? "Choose map provider"
+                        : undefined
+              }
+              data-my-location-toggle={
+                index === 0
+                  ? "true"
+                  : undefined
               }
               data-street-view-toggle={
                 index === 1
@@ -637,30 +692,36 @@ export function CustomerTracksWorkspace({
               }
               style={{
                 backgroundColor:
+                  (index === 0 &&
+                    isMyLocationActive) ||
                   (index === 1 &&
-                  isStreetViewActive) ||
-                (index === 3 &&
-                  isTrafficActive) ||
-                (index === 4 &&
-                  isBasemapMenuOpen)
+                    isStreetViewActive) ||
+                  (index === 3 &&
+                    isTrafficActive) ||
+                  (index === 4 &&
+                    isBasemapMenuOpen)
                     ? "#357cf4"
                     : "#ffffff",
                 color:
+                  (index === 0 &&
+                    isMyLocationActive) ||
                   (index === 1 &&
-                  isStreetViewActive) ||
-                (index === 3 &&
-                  isTrafficActive) ||
-                (index === 4 &&
-                  isBasemapMenuOpen)
+                    isStreetViewActive) ||
+                  (index === 3 &&
+                    isTrafficActive) ||
+                  (index === 4 &&
+                    isBasemapMenuOpen)
                     ? "#ffffff"
                     : "#52698e",
                 borderColor:
+                  (index === 0 &&
+                    isMyLocationActive) ||
                   (index === 1 &&
-                  isStreetViewActive) ||
-                (index === 3 &&
-                  isTrafficActive) ||
-                (index === 4 &&
-                  isBasemapMenuOpen)
+                    isStreetViewActive) ||
+                  (index === 3 &&
+                    isTrafficActive) ||
+                  (index === 4 &&
+                    isBasemapMenuOpen)
                     ? "#357cf4"
                     : "#d7dfeb",
               }}

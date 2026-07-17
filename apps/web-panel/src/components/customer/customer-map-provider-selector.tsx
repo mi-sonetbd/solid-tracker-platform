@@ -16,7 +16,6 @@ type CustomerMapProviderSelectorProps = {
 const providerOptions: Array<{
   value: TrackingMapBasemap;
   label: string;
-  detail?: string;
 }> = [
   {
     value: "google-roadmap",
@@ -33,12 +32,10 @@ const providerOptions: Array<{
   {
     value: "openstreet-hybrid",
     label: "OpenStreet Map (Hybrid)",
-    detail: "Esri imagery + labels",
   },
   {
     value: "openstreet-satellite",
     label: "OpenStreet Map (Satellite)",
-    detail: "Esri imagery",
   },
 ];
 
@@ -72,12 +69,12 @@ export function CustomerMapProviderSelector({
             onClick={() =>
               onChange(option.value)
             }
-            className="flex w-full items-start gap-2 rounded px-0.5 py-1.5 text-left transition hover:bg-[#f2f6fc]"
+            className="flex w-full items-center gap-2 rounded px-0.5 py-1.5 text-left transition hover:bg-[#f2f6fc]"
           >
             <span
               aria-hidden="true"
               className={[
-                "mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border",
+                "grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border",
                 selected
                   ? "border-[#357cf4]"
                   : "border-[#8ea0bb]",
@@ -88,16 +85,8 @@ export function CustomerMapProviderSelector({
               ) : null}
             </span>
 
-            <span className="min-w-0">
-              <span className="block text-[13px] font-medium leading-5 text-[#435878]">
-                {option.label}
-              </span>
-
-              {option.detail ? (
-                <span className="block text-[10px] leading-4 text-[#8a9ab2]">
-                  {option.detail}
-                </span>
-              ) : null}
+            <span className="text-[13px] font-medium leading-5 text-[#435878]">
+              {option.label}
             </span>
           </button>
         );

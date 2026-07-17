@@ -15,3 +15,13 @@ export type TrackingMapZoomCommand = {
   id: number;
   delta: 1 | -1;
 };
+
+export type TrackingMapLocationCommand = {
+  id: number;
+};
+
+export type TrackingMapLocationStatus =
+  | "idle"
+  | "locating"
+  | "ready"
+  | "error";
