@@ -109,6 +109,24 @@ function createEsriImageryType() {
   });
 }
 
+function streetViewMarkerRadius(
+  map: google.maps.Map,
+  position: google.maps.LatLng,
+) {
+  const zoom = map.getZoom() ?? 13;
+  const latitudeRadians =
+    (position.lat() * Math.PI) / 180;
+  const metersPerPixel =
+    (156543.03392 *
+      Math.cos(latitudeRadians)) /
+    2 ** zoom;
+
+  return Math.max(
+    5,
+    metersPerPixel * 7,
+  );
+}
+
 function createEsriReferenceType() {
   return new google.maps.ImageMapType({
     alt: "Esri boundaries and places",
@@ -193,6 +211,20 @@ export default function TrackingMap({
     useRef<google.maps.StreetViewService | null>(
       null,
     );
+  const streetViewClickListenerRef =
+    useRef<google.maps.MapsEventListener | null>(
+      null,
+    );
+  const streetViewSelectionCircleRef =
+    useRef<google.maps.Circle | null>(
+      null,
+    );
+  const streetViewInfoWindowRef =
+    useRef<google.maps.InfoWindow | null>(
+      null,
+    );
+  const streetViewRequestIdRef =
+    useRef(0);
   const positionCircleRef =
     useRef<google.maps.Circle | null>(null);
   const positionClickListenerRef =
@@ -230,6 +262,34 @@ export default function TrackingMap({
 
       infoWindowRef.current?.close();
       infoWindowRef.current = null;
+    }, []);
+
+  const clearStreetViewSelection =
+    useCallback(() => {
+      streetViewRequestIdRef.current += 1;
+
+      streetViewClickListenerRef.current?.remove();
+      streetViewClickListenerRef.current = null;
+
+      streetViewSelectionCircleRef.current?.setMap(
+        null,
+      );
+      streetViewSelectionCircleRef.current = null;
+
+      streetViewInfoWindowRef.current?.close();
+      streetViewInfoWindowRef.current = null;
+
+      const map = mapRef.current;
+
+      if (map) {
+        map.setOptions({
+          draggableCursor: null,
+        });
+
+        map
+          .getStreetView()
+          .setVisible(false);
+      }
     }, []);
 
   useEffect(() => {
@@ -471,28 +531,83 @@ export default function TrackingMap({
       return;
     }
 
+    clearStreetViewSelection();
+
+    if (!streetViewActive) {
+      return;
+    }
+
     const streetViewService = service;
     const panorama =
       map.getStreetView();
 
-    if (!streetViewActive) {
-      panorama.setVisible(false);
-      return;
-    }
+    map.setOptions({
+      draggableCursor: "crosshair",
+    });
 
-    const center = map.getCenter();
+    const clickListener = map.addListener(
+      "click",
+      (
+        event: google.maps.MapMouseEvent,
+      ) => {
+        const selectedPoint =
+          event.latLng;
 
-    if (!center) {
-      return;
-    }
+        if (!selectedPoint) {
+          return;
+        }
 
-    let cancelled = false;
+        const requestId =
+          streetViewRequestIdRef.current + 1;
 
-    async function showStreetView() {
-      try {
-        const response =
-          await streetViewService.getPanorama({
-            location: center,
+        streetViewRequestIdRef.current =
+          requestId;
+
+        streetViewSelectionCircleRef.current?.setMap(
+          null,
+        );
+        streetViewInfoWindowRef.current?.close();
+
+        panorama.setVisible(false);
+
+        const selectionCircle =
+          new google.maps.Circle({
+            map,
+            center: selectedPoint,
+            radius: streetViewMarkerRadius(
+              map,
+              selectedPoint,
+            ),
+            strokeColor: "#ffffff",
+            strokeOpacity: 1,
+            strokeWeight: 3,
+            fillColor: "#357cf4",
+            fillOpacity: 1,
+            clickable: false,
+            zIndex: 1200,
+          });
+
+        const statusWindow =
+          new google.maps.InfoWindow({
+            content:
+              "Searching Street View...",
+            position: selectedPoint,
+            disableAutoPan: true,
+          });
+
+        statusWindow.open({
+          map,
+          shouldFocus: false,
+        });
+
+        streetViewSelectionCircleRef.current =
+          selectionCircle;
+        streetViewInfoWindowRef.current =
+          statusWindow;
+
+        void streetViewService
+          .getPanorama({
+            location: selectedPoint,
             preference:
               google.maps
                 .StreetViewPreference
@@ -503,41 +618,75 @@ export default function TrackingMap({
                 .StreetViewSource
                 .OUTDOOR,
             ],
+          })
+          .then((response) => {
+            if (
+              streetViewRequestIdRef.current !==
+              requestId
+            ) {
+              return;
+            }
+
+            const location =
+              response.data.location;
+
+            if (!location?.pano) {
+              statusWindow.setContent(
+                "No Street View found near this point.",
+              );
+              return;
+            }
+
+            const panoramaPosition =
+              location.latLng ??
+              selectedPoint;
+
+            selectionCircle.setCenter(
+              panoramaPosition,
+            );
+            selectionCircle.setRadius(
+              streetViewMarkerRadius(
+                map,
+                panoramaPosition,
+              ),
+            );
+
+            statusWindow.close();
+
+            map.setOptions({
+              draggableCursor: null,
+            });
+
+            panorama.setPano(
+              location.pano,
+            );
+            panorama.setPov({
+              heading: 0,
+              pitch: 0,
+            });
+            panorama.setVisible(true);
+          })
+          .catch(() => {
+            if (
+              streetViewRequestIdRef.current !==
+              requestId
+            ) {
+              return;
+            }
+
+            statusWindow.setContent(
+              "No Street View found near this point.",
+            );
           });
+      },
+    );
 
-        if (cancelled) {
-          return;
-        }
+    streetViewClickListenerRef.current =
+      clickListener;
 
-        const location =
-          response.data.location;
-
-        if (!location?.pano) {
-          panorama.setVisible(false);
-          return;
-        }
-
-        panorama.setPano(
-          location.pano,
-        );
-        panorama.setPov({
-          heading: 0,
-          pitch: 0,
-        });
-        panorama.setVisible(true);
-      } catch {
-        if (!cancelled) {
-          panorama.setVisible(false);
-        }
-      }
-    }
-
-    void showStreetView();
-
-    return () => {
-      cancelled = true;
-    };
+    return clearStreetViewSelection;
   }, [
+    clearStreetViewSelection,
     loadState,
     streetViewActive,
   ]);

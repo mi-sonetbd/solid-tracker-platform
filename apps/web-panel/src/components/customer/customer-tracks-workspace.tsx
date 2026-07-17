@@ -583,7 +583,7 @@ export function CustomerTracksWorkspace({
                 index === 1
                   ? isStreetViewActive
                     ? "Exit Street View"
-                    : "Open Street View"
+                    : "Select Street View point"
                   : index === 4
                     ? "Choose map provider"
                     : `Track map tool ${index + 1}`
@@ -592,7 +592,7 @@ export function CustomerTracksWorkspace({
                 index === 1
                   ? isStreetViewActive
                     ? "Exit Street View"
-                    : "Open Street View"
+                    : "Select Street View point"
                   : index === 4
                     ? "Choose map provider"
                     : undefined

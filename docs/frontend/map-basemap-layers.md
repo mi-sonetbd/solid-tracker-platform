@@ -2,7 +2,7 @@
 
 ## Scope
 
-The same map controls are available on:
+The same controls are available on:
 
 ```text
 /monitor
@@ -10,9 +10,9 @@ The same map controls are available on:
 /tracks
 ```
 
-## Provider selector
+## Map providers
 
-The existing Layers button opens the five-provider radio menu:
+The Layers controller opens:
 
 1. Google Map (Street)
 2. Google Map (Hybrid)
@@ -20,40 +20,38 @@ The existing Layers button opens the five-provider radio menu:
 4. OpenStreet Map (Hybrid) â€” Esri imagery with labels
 5. OpenStreet Map (Satellite) â€” Esri imagery
 
-## Street View controller
+## Street View point selection
 
-The second existing right-side map-controller button is the Street View toggle.
+The second right-side controller enables Street View point-selection mode.
 
 ```text
-First click  â†’ Open nearest Street View
-Second click â†’ Exit Street View
+1. Click the Street View controller.
+2. The controller becomes blue and the map cursor becomes a crosshair.
+3. Click the desired location on the map.
+4. A blue location marker appears.
+5. Solid Tracker searches for the nearest outdoor panorama within 1 km.
+6. The panorama opens when coverage exists.
 ```
 
-The button is highlighted blue while Street View is active.
+When coverage does not exist near the selected point, the map remains visible
+and the location marker displays a no-coverage message. Another map point can
+then be selected without leaving selection mode.
 
-Opening the provider selector exits Street View. Opening Street View closes the
-provider selector.
+Clicking the controller again exits Street View, removes the selection marker,
+removes the map-click listener, restores the normal cursor, and returns to the
+map.
 
-## Street View lookup
-
-The shared map searches for the nearest outdoor panorama within 1,000 meters of
-the current map center using `StreetViewService.getPanorama()`.
-
-When imagery is found, the map's default Street View panorama is displayed.
-When no panorama exists in the search radius, the map remains visible.
-
-Street View availability depends on Google's imagery coverage for the selected
-location.
+Opening the provider selector also exits Street View selection.
 
 ## Existing behavior preserved
 
 The feature preserves:
 
-- all five basemap providers;
+- all five map providers;
 - integrated right-side zoom controls;
 - selected-position focusing;
 - location overlay and information window;
-- responsive resizing;
+- responsive resizing and center preservation;
 - property-drawer behavior;
 - Google and Esri attribution;
-- one shared implementation across Monitor, Alerts, and Tracks.
+- the shared Monitor, Alerts, and Tracks implementation.
