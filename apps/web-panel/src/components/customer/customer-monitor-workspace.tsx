@@ -22,7 +22,6 @@ import {
   Signal,
   SlidersHorizontal,
   Target,
-  Route,
 } from "lucide-react";
 import {
   useMemo,
@@ -32,6 +31,7 @@ import {
 import { CustomerDevicePropertyDrawer } from "@/components/customer/customer-device-property-drawer";
 import { CustomerMonitorRail } from "@/components/customer/customer-monitor-rail";
 import { CustomerMapProviderSelector } from "@/components/customer/customer-map-provider-selector";
+import { CustomerMapTrafficLightIcon } from "@/components/customer/customer-map-traffic-light-icon";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
 import type {
   TrackingMapBasemap,
@@ -62,7 +62,7 @@ const mapTools = [
   LocateFixed,
   MapPinned,
   SlidersHorizontal,
-  Route,
+  CustomerMapTrafficLightIcon,
   Layers3,
 ];
 
@@ -598,19 +598,35 @@ export function CustomerMonitorWorkspace({
                   ? "true"
                   : undefined
               }
-              style={
-                (index === 1 &&
+              style={{
+                backgroundColor:
+                  (index === 1 &&
                   isStreetViewActive) ||
                 (index === 3 &&
                   isTrafficActive) ||
                 (index === 4 &&
                   isBasemapMenuOpen)
-                  ? {
-                      backgroundColor: "#357cf4",
-                      color: "#ffffff",
-                    }
-                  : undefined
-              }
+                    ? "#357cf4"
+                    : "#ffffff",
+                color:
+                  (index === 1 &&
+                  isStreetViewActive) ||
+                (index === 3 &&
+                  isTrafficActive) ||
+                (index === 4 &&
+                  isBasemapMenuOpen)
+                    ? "#ffffff"
+                    : "#52698e",
+                borderColor:
+                  (index === 1 &&
+                  isStreetViewActive) ||
+                (index === 3 &&
+                  isTrafficActive) ||
+                (index === 4 &&
+                  isBasemapMenuOpen)
+                    ? "#357cf4"
+                    : "#d7dfeb",
+              }}
               className={[
                 "grid h-8 w-8 place-items-center rounded-[3px] border border-[#e1e7f0] bg-white text-[#405779] shadow-[0_2px_8px_rgba(35,61,102,0.16)]",
                 index === 3
@@ -621,7 +637,7 @@ export function CustomerMonitorWorkspace({
                   : "",
               ].join(" ")}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9fc1ff] focus-visible:ring-offset-0" />
             </button>
           ))}
 

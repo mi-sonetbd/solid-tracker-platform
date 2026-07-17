@@ -2,7 +2,7 @@
 
 ## Scope
 
-The same map controls are available on:
+The same controls are available on:
 
 ```text
 /monitor
@@ -10,54 +10,29 @@ The same map controls are available on:
 /tracks
 ```
 
-## Map providers
+## Traffic controller
 
-The Layers controller opens:
-
-1. Google Map (Street)
-2. Google Map (Hybrid)
-3. Google Map (Satellite)
-4. OpenStreet Map (Hybrid) â€” Esri imagery with labels
-5. OpenStreet Map (Satellite) â€” Esri imagery
-
-## Street View
-
-The second controller provides the shared Street View behavior. Depending on
-the current branch history, it opens Street View or enables map-point selection.
-
-## Traffic layer
-
-The fourth controller, previously blank, now uses a route icon and controls
-Google Maps `TrafficLayer`.
+The fourth right-side controller uses a dedicated traffic-light icon and
+toggles Google Maps `TrafficLayer`.
 
 ```text
-First click  â†’ Show live traffic overlay
-Second click â†’ Hide traffic overlay
+Inactive â†’ white button, dark traffic-light icon
+Active   â†’ blue button, white traffic-light icon
 ```
 
-The controller is highlighted blue while traffic is enabled.
+The browser's default black focus outline is removed. Keyboard focus uses a
+controlled blue ring.
 
-Traffic is an overlay and does not change the selected road, hybrid, satellite,
-Google, or Esri basemap. The current traffic state is preserved when switching
-between basemap providers.
+Traffic is an overlay and does not replace the selected map provider. It
+remains compatible with Google Street, Google Hybrid, Google Satellite, Esri
+Hybrid, and Esri Satellite.
 
-Traffic availability and detail depend on Google coverage for the displayed
-area.
+## Other controls preserved
 
-## Zoom
-
-Zoom in and zoom out remain integrated at the bottom of the existing right-side
-toolbar. The separate bottom-right custom controller remains removed.
-
-## Shared behavior preserved
-
-The feature preserves:
-
-- all configured map providers;
+- provider selector;
 - Street View;
+- integrated zoom controls;
 - selected-position focusing;
-- location overlays and information windows;
-- responsive resizing;
-- property-drawer behavior;
+- responsive map resize behavior;
 - Google and Esri attribution;
-- the shared Monitor, Alerts, and Tracks implementation.
+- Monitor, Alerts, and Tracks consistency.
