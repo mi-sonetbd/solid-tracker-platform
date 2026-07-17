@@ -19,6 +19,7 @@ import {
   useState,
   type ReactNode,
   useEffect,
+  useRef,
 } from "react";
 import { CustomerMonitorRail } from "@/components/customer/customer-monitor-rail";
 import { CustomerMapProviderSelector } from "@/components/customer/customer-map-provider-selector";
@@ -167,24 +168,25 @@ export function CustomerTracksWorkspace({
   ] = useState(false);
   const isMyLocationActive =
     isMyLocationEnabled;
+  const mapFullscreenRef =
+    useRef<HTMLElement | null>(null);
   const [
     isFullscreen,
     setIsFullscreen,
-  ] = useState(
-    () =>
-      typeof document !== "undefined" &&
-      Boolean(
-        document.fullscreenElement,
-      ),
-  );
+  ] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(
-        Boolean(
-          document.fullscreenElement,
-        ),
+        document.fullscreenElement ===
+          mapFullscreenRef.current,
       );
+
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(
+          new Event("resize"),
+        );
+      });
     };
 
     document.addEventListener(
@@ -565,7 +567,20 @@ export function CustomerTracksWorkspace({
         </section>
       </CollapsibleTrackPanel>
 
-      <section className="relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]">
+      <section
+        ref={mapFullscreenRef}
+        data-map-fullscreen-root="true"
+        style={
+          isFullscreen
+            ? {
+                width: "100vw",
+                height: "100vh",
+                minWidth: 0,
+                maxWidth: "none",
+                maxHeight: "none",
+              }
+            : undefined
+        } className="relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]">
         <TrackingMapClient
           selectedPosition={null}
           basemap={basemap}
@@ -657,12 +672,20 @@ export function CustomerTracksWorkspace({
                   setIsBasemapMenuOpen(false);
                   setIsStreetViewActive(false);
 
+                  const fullscreenRoot =
+                    mapFullscreenRef.current;
+
+                  if (!fullscreenRoot) {
+                    return;
+                  }
+
                   if (
-                    document.fullscreenElement
+                    document.fullscreenElement ===
+                    fullscreenRoot
                   ) {
                     void document.exitFullscreen();
                   } else {
-                    void document.documentElement
+                    void fullscreenRoot
                       .requestFullscreen();
                   }
                 }
