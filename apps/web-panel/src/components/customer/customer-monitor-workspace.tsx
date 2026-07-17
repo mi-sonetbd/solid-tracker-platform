@@ -428,10 +428,10 @@ export function CustomerMonitorWorkspace({
       <section
         className={[
           "relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]",
-          "[&_.leaflet-right]:transition-[right] [&_.leaflet-right]:duration-150",
+          "[&_.solid-tracker-map-controls]:transition-[right] [&_.solid-tracker-map-controls]:duration-150",
           drawerOpen && selectedVehicle
-            ? "[&_.leaflet-right]:right-[350px]"
-            : "[&_.leaflet-right]:right-0",
+            ? "[&_.solid-tracker-map-controls]:right-[350px]"
+            : "[&_.solid-tracker-map-controls]:right-0",
         ].join(" ")}
       >
         <TrackingMapClient

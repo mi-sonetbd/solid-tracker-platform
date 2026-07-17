@@ -1,8 +1,8 @@
-# Shared Map Basemap Layers
+# Shared Google Maps Basemap
 
 ## Scope
 
-A single basemap toggle is available on:
+The shared tracking map uses Google Maps JavaScript API on:
 
 ```text
 /monitor
@@ -10,39 +10,60 @@ A single basemap toggle is available on:
 /tracks
 ```
 
-## Existing toolbar toggle
+The same shared component is also used by compatible management workspaces.
 
-No native Leaflet layer selector and no separate Map button are rendered.
+## Basemap toggle
 
-The existing `Layers3` toolbar button toggles:
+The existing `Layers3` toolbar button remains the only basemap control.
 
 ```text
-Map â†’ Satellite
-Satellite â†’ Map
+Google Roadmap â†’ Google Satellite
+Google Satellite â†’ Google Roadmap
 ```
 
-Its accessible label and tooltip describe the next available view.
+No native Google map-type control and no second map button are shown.
 
-The button is highlighted blue while Satellite is active and returns to its
-normal appearance while Map is active.
+The button uses its active blue treatment while Satellite is selected.
 
-## Basemap providers
+## Google map types
 
-- Map: OpenStreetMap
-- Satellite: Esri World Imagery
+- `google.maps.MapTypeId.ROADMAP`
+- `google.maps.MapTypeId.SATELLITE`
 
-## Shared map flow
+OpenStreetMap and Esri World Imagery are no longer rendered by the shared map.
 
-Each customer workspace owns the current basemap and passes it through
-`TrackingMapClient` to `TrackingMap`. The shared map renders one tile layer.
+## API loading
 
-## Leaflet safety
+The web panel loads Maps JavaScript API through:
 
-The toggle does not change:
+```text
+@googlemaps/js-api-loader
+```
 
-- `TrackingMapController`;
-- position focusing;
-- resize handling;
-- markers and popups;
-- disabled map animations;
-- React Leaflet map ownership or teardown behavior.
+The API key is read only from:
+
+```text
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+```
+
+The key must remain in the Git-ignored `apps/web-panel/.env.local` file and
+must be restricted to approved website referrers and Maps JavaScript API.
+
+## Map behavior preserved
+
+The Google renderer preserves:
+
+- selected-position focus at zoom 16;
+- a clickable red location circle;
+- an information window containing the position label;
+- responsive map resizing;
+- custom bottom-right zoom controls;
+- property-drawer control offset;
+- the existing Monitor, Alerts, and Tracks basemap state;
+- truthful loading and configuration-error states.
+
+## Controls
+
+Google's native map-type, Street View, fullscreen, and zoom controls are
+disabled. Solid Tracker owns the existing basemap toggle and custom zoom
+controls so the customer interface remains consistent.
