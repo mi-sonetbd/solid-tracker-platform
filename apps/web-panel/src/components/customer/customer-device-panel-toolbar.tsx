@@ -9,7 +9,7 @@ import {
   Heart,
   Navigation,
   RefreshCw,
-  SignalLow,
+
 } from "lucide-react";
 import {
   useEffect,
@@ -698,6 +698,34 @@ export function useCustomerDevicePanel<T>(
   };
 }
 
+function OfflineNetworkCrossIcon({
+  className = "h-4 w-4",
+}: {
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M3.25 15.75V13.1M6.6 15.75V10.55M9.95 15.75V7.85M13.3 15.75V5.1"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.25 7.05L18.1 9.9M18.1 7.05L15.25 9.9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function CountButton({
   active,
   label,
@@ -877,11 +905,11 @@ export function CustomerDevicePanelToolbar({
   const sortOptions = [
     {
       value: "name-asc" as const,
-      label: "Name Aâ€“Z",
+      label: "Name A-Z",
     },
     {
       value: "name-desc" as const,
-      label: "Name Zâ€“A",
+      label: "Name Z-A",
     },
     {
       value: "newest" as const,
@@ -955,9 +983,8 @@ export function CustomerDevicePanelToolbar({
           label="Offline"
           count={counts.offline}
           icon={
-            <SignalLow
+            <OfflineNetworkCrossIcon
               className="h-4 w-4 text-slate-700"
-              aria-hidden="true"
             />
           }
           onClick={() => {
