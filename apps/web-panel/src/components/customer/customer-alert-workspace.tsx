@@ -12,16 +12,17 @@ import {
   MapPinned,
   MessageSquareText,
   Search,
-  SlidersHorizontal,
 } from "lucide-react";
 import {
   useMemo,
   useState,
   type ReactNode,
+  useEffect,
 } from "react";
 import { CustomerMonitorRail } from "@/components/customer/customer-monitor-rail";
 import { CustomerMapProviderSelector } from "@/components/customer/customer-map-provider-selector";
 import { CustomerMapTrafficLightIcon } from "@/components/customer/customer-map-traffic-light-icon";
+import { CustomerMapFullscreenIcon } from "@/components/customer/customer-map-fullscreen-icon";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
 import type {
   TrackingMapBasemap,
@@ -50,7 +51,7 @@ type CollapsibleAlertPanelProps = {
 const mapTools = [
   LocateFixed,
   MapPinned,
-  SlidersHorizontal,
+  CustomerMapFullscreenIcon,
   CustomerMapTrafficLightIcon,
   Layers3,
 ];
@@ -153,6 +154,38 @@ export function CustomerAlertWorkspace({
   ] = useState(false);
   const isMyLocationActive =
     isMyLocationEnabled;
+  const [
+    isFullscreen,
+    setIsFullscreen,
+  ] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      Boolean(
+        document.fullscreenElement,
+      ),
+  );
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        Boolean(
+          document.fullscreenElement,
+        ),
+      );
+    };
+
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullscreenChange,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
   const [
     isStreetViewActive,
     setIsStreetViewActive,
@@ -464,6 +497,20 @@ export function CustomerAlertWorkspace({
                   );
                 }
 
+                if (index === 2) {
+                  setIsBasemapMenuOpen(false);
+                  setIsStreetViewActive(false);
+
+                  if (
+                    document.fullscreenElement
+                  ) {
+                    void document.exitFullscreen();
+                  } else {
+                    void document.documentElement
+                      .requestFullscreen();
+                  }
+                }
+
                 if (index === 3) {
                   setIsTrafficActive(
                     (current) => !current,
@@ -482,9 +529,11 @@ export function CustomerAlertWorkspace({
                   ? isMyLocationActive
                   : index === 1
                     ? isStreetViewActive
-                    : index === 3
-                      ? isTrafficActive
-                      : undefined
+                    : index === 2
+                      ? isFullscreen
+                      : index === 3
+                        ? isTrafficActive
+                        : undefined
               }
               aria-expanded={
                 index === 4
@@ -508,13 +557,17 @@ export function CustomerAlertWorkspace({
                     ? isStreetViewActive
                       ? "Exit Street View"
                       : "Select Street View point"
-                    : index === 3
-                      ? isTrafficActive
-                        ? "Hide traffic"
-                        : "Show traffic"
-                      : index === 4
-                        ? "Choose map provider"
-                        : `Alert map tool ${index + 1}`
+                    : index === 2
+                      ? isFullscreen
+                        ? "Exit fullscreen"
+                        : "Enter fullscreen"
+                      : index === 3
+                        ? isTrafficActive
+                          ? "Hide traffic"
+                          : "Show traffic"
+                        : index === 4
+                          ? "Choose map provider"
+                          : `Alert map tool ${index + 1}`
               }
               title={
                 index === 0
@@ -528,13 +581,17 @@ export function CustomerAlertWorkspace({
                     ? isStreetViewActive
                       ? "Exit Street View"
                       : "Select Street View point"
-                    : index === 3
-                      ? isTrafficActive
-                        ? "Hide traffic"
-                        : "Show traffic"
-                      : index === 4
-                        ? "Choose map provider"
-                        : undefined
+                    : index === 2
+                      ? isFullscreen
+                        ? "Exit fullscreen"
+                        : "Enter fullscreen"
+                      : index === 3
+                        ? isTrafficActive
+                          ? "Hide traffic"
+                          : "Show traffic"
+                        : index === 4
+                          ? "Choose map provider"
+                          : undefined
               }
               data-my-location-toggle={
                 index === 0
@@ -543,6 +600,11 @@ export function CustomerAlertWorkspace({
               }
               data-street-view-toggle={
                 index === 1
+                  ? "true"
+                  : undefined
+              }
+              data-fullscreen-toggle={
+                index === 2
                   ? "true"
                   : undefined
               }
@@ -562,6 +624,8 @@ export function CustomerAlertWorkspace({
                     isMyLocationActive) ||
                   (index === 1 &&
                     isStreetViewActive) ||
+                  (index === 2 &&
+                    isFullscreen) ||
                   (index === 3 &&
                     isTrafficActive) ||
                   (index === 4 &&
@@ -573,6 +637,8 @@ export function CustomerAlertWorkspace({
                     isMyLocationActive) ||
                   (index === 1 &&
                     isStreetViewActive) ||
+                  (index === 2 &&
+                    isFullscreen) ||
                   (index === 3 &&
                     isTrafficActive) ||
                   (index === 4 &&
@@ -584,6 +650,8 @@ export function CustomerAlertWorkspace({
                     isMyLocationActive) ||
                   (index === 1 &&
                     isStreetViewActive) ||
+                  (index === 2 &&
+                    isFullscreen) ||
                   (index === 3 &&
                     isTrafficActive) ||
                   (index === 4 &&
@@ -601,7 +669,7 @@ export function CustomerAlertWorkspace({
                   : "",
               ].join(" ")}
             >
-              <Icon className="h-4 w-4 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9fc1ff] focus-visible:ring-offset-0" />
+              <Icon className="h-4 w-4 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9fc1ff] focus-visible:ring-offset-0 group" />
             </button>
           ))}
 

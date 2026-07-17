@@ -1,8 +1,8 @@
-# Shared Map Providers, Traffic, and My Location
+# Shared Map Controls
 
 ## Scope
 
-The same controls are available on:
+The same map controls are available on:
 
 ```text
 /monitor
@@ -10,34 +10,40 @@ The same controls are available on:
 /tracks
 ```
 
-## My Location toggle
+## Fullscreen controller
 
-The top map controller now uses an explicit enabled/disabled state.
+The third controller, previously the settings/sliders button, is now the
+fullscreen toggle.
 
 ```text
-First click  â†’ request and display My Location
-Second click â†’ hide My Location and remove its marker
-Third click  â†’ request and display My Location again
+First click  â†’ enter browser fullscreen
+Second click â†’ exit browser fullscreen
+Esc key      â†’ exit fullscreen and reset the button
 ```
 
-The controller remains blue while My Location is enabled. After a successful
-request, the button label becomes **Hide my location** instead of remaining
-stuck in a permanent ready state.
+The controller uses a fullscreen icon while inactive and an exit-fullscreen
+icon while active. The button is white with a dark icon while inactive and blue
+with a white icon while fullscreen is active.
 
-Disabling the controller:
+The implementation listens for the browser `fullscreenchange` event, so the
+button remains synchronized when fullscreen is exited with the keyboard.
 
-- removes the blue accuracy circle;
-- closes the My Location information window;
-- resets the location status to idle;
-- clears the current location command.
+## Controller order
 
-## Other map behavior preserved
+1. My Location
+2. Street View
+3. Fullscreen
+4. Traffic
+5. Map provider
+6. Zoom in
+7. Zoom out
 
-- Google traffic refresh after basemap changes;
-- provider list without secondary descriptions;
-- Google Street, Hybrid, and Satellite;
-- Esri Hybrid and Satellite;
+## Existing behavior preserved
+
+- toggleable My Location;
 - Street View point selection;
+- Google traffic overlay;
+- provider selector;
+- Google and Esri map providers;
 - integrated zoom controls;
-- responsive map resize behavior;
 - Monitor, Alerts, and Tracks consistency.
