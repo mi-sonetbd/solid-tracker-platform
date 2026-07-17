@@ -2,7 +2,7 @@
 
 ## Scope
 
-The shared tracking map uses Google Maps JavaScript API on:
+The shared Google tracking map is used on:
 
 ```text
 /monitor
@@ -10,60 +10,54 @@ The shared tracking map uses Google Maps JavaScript API on:
 /tracks
 ```
 
-The same shared component is also used by compatible management workspaces.
+## Single basemap toggle
 
-## Basemap toggle
-
-The existing `Layers3` toolbar button remains the only basemap control.
+The existing `Layers3` button remains the only basemap control.
 
 ```text
-Google Roadmap â†’ Google Satellite
-Google Satellite â†’ Google Roadmap
+Google Roadmap â†’ Google Hybrid
+Google Hybrid â†’ Google Roadmap
 ```
 
-No native Google map-type control and no second map button are shown.
+The customer-facing behavior is still described as Map and Satellite.
 
-The button uses its active blue treatment while Satellite is selected.
+## Map types
 
-## Google map types
-
-- `google.maps.MapTypeId.ROADMAP`
-- `google.maps.MapTypeId.SATELLITE`
-
-OpenStreetMap and Esri World Imagery are no longer rendered by the shared map.
-
-## API loading
-
-The web panel loads Maps JavaScript API through:
+### Map
 
 ```text
-@googlemaps/js-api-loader
+google.maps.MapTypeId.ROADMAP
 ```
 
-The API key is read only from:
+### Satellite with labels
 
 ```text
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+google.maps.MapTypeId.HYBRID
 ```
 
-The key must remain in the Git-ignored `apps/web-panel/.env.local` file and
-must be restricted to approved website referrers and Maps JavaScript API.
+Google `HYBRID` combines satellite imagery with road, place, and other
+basemap labels. Plain `SATELLITE` is not used because it omits those labels.
 
-## Map behavior preserved
+## Loading behavior
 
-The Google renderer preserves:
+Satellite imagery uses photographic tiles and may load more slowly than the
+roadmap, especially on the first view or after moving to a new area. The same
+Google map instance is retained when changing the map type so the application
+does not recreate the map during each toggle.
 
-- selected-position focus at zoom 16;
-- a clickable red location circle;
-- an information window containing the position label;
-- responsive map resizing;
-- custom bottom-right zoom controls;
-- property-drawer control offset;
-- the existing Monitor, Alerts, and Tracks basemap state;
-- truthful loading and configuration-error states.
+## Zoom controls
 
-## Controls
+Solid Tracker keeps its custom bottom-right zoom controls. The zoom-out control
+uses an ASCII hyphen so it renders correctly regardless of source encoding.
 
-Google's native map-type, Street View, fullscreen, and zoom controls are
-disabled. Solid Tracker owns the existing basemap toggle and custom zoom
-controls so the customer interface remains consistent.
+## Existing behavior preserved
+
+The refinement does not change:
+
+- the single `Layers3` toggle;
+- selected-position focusing;
+- location overlays and information windows;
+- resize handling;
+- property-drawer control positioning;
+- API-key handling;
+- Google Maps loading and runtime-error states.

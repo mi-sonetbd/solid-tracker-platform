@@ -56,7 +56,7 @@ function mapTypeForBasemap(
   basemap: TrackingMapBasemap,
 ) {
   return basemap === "satellite"
-    ? google.maps.MapTypeId.SATELLITE
+    ? google.maps.MapTypeId.HYBRID
     : google.maps.MapTypeId.ROADMAP;
 }
 
@@ -361,7 +361,7 @@ export default function TrackingMap({
           onClick={() => changeZoom(-1)}
           className="grid h-8 w-8 place-items-center text-xl font-light leading-none text-[#52698e] transition hover:bg-[#f2f6fb] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span aria-hidden="true">âˆ’</span>
+          <span aria-hidden="true">-</span>
         </button>
       </div>
 
