@@ -20,9 +20,7 @@ export function SolidTrackerWordmark({
           compact ? "text-[22px]" : "text-[31px]",
           lightBackground ? "text-[#1295dc]" : "text-white",
         ].join(" ")}
-      >
-        Solid
-      </span>
+      ><span>S</span><MapPin aria-hidden="true" className="solid-marker-o mx-[1px] inline-block h-[0.92em] w-[0.92em] -skew-x-12 align-[-0.08em] text-[#f59a23] stroke-[2.15]" /><span>lid</span></span>
       <span
         className={[
           "font-black italic tracking-[-1.5px]",
@@ -32,14 +30,6 @@ export function SolidTrackerWordmark({
       >
         Tracker
       </span>
-      <MapPin data-solid-tracker-logo-icon="map-pin"
-        className={[
-          "ml-0.5",
-          compact ? "h-[17px] w-[17px]" : "h-6 w-6",
-          lightBackground ? "text-[#ff9b24]" : "text-[#9fdcff]",
-        ].join(" ")}
-        strokeWidth={2.4}
-      />
     </span>
   );
 
