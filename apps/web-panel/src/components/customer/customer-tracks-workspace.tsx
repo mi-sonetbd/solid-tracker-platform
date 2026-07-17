@@ -146,6 +146,10 @@ export function CustomerTracksWorkspace({
     useState<TrackingMapZoomCommand | null>(
       null,
     );
+  const [
+    isStreetViewActive,
+    setIsStreetViewActive,
+  ] = useState(false);
   const {
     vehicles,
     loading,
@@ -509,6 +513,9 @@ export function CustomerTracksWorkspace({
           selectedPosition={null}
           basemap={basemap}
           zoomCommand={zoomCommand}
+          streetViewActive={
+            isStreetViewActive
+          }
         />
 
         <label className="absolute left-3 top-3 z-[1000] flex h-8 w-[220px] items-center rounded-[3px] bg-white px-3 shadow-[0_2px_8px_rgba(35,61,102,0.16)]">
@@ -543,12 +550,25 @@ export function CustomerTracksWorkspace({
                 !canViewLocation && index === 0
               }
               onClick={() => {
+                if (index === 1) {
+                  setIsBasemapMenuOpen(false);
+                  setIsStreetViewActive(
+                    (current) => !current,
+                  );
+                }
+
                 if (index === 4) {
+                  setIsStreetViewActive(false);
                   setIsBasemapMenuOpen(
                     (current) => !current,
                   );
                 }
               }}
+              aria-pressed={
+                index === 1
+                  ? isStreetViewActive
+                  : undefined
+              }
               aria-expanded={
                 index === 4
                   ? isBasemapMenuOpen
@@ -560,13 +580,26 @@ export function CustomerTracksWorkspace({
                   : undefined
               }
               aria-label={
-                index === 4
-                  ? "Choose map provider"
-                  : `Track map tool ${index + 1}`
+                index === 1
+                  ? isStreetViewActive
+                    ? "Exit Street View"
+                    : "Open Street View"
+                  : index === 4
+                    ? "Choose map provider"
+                    : `Track map tool ${index + 1}`
               }
               title={
-                index === 4
-                  ? "Choose map provider"
+                index === 1
+                  ? isStreetViewActive
+                    ? "Exit Street View"
+                    : "Open Street View"
+                  : index === 4
+                    ? "Choose map provider"
+                    : undefined
+              }
+              data-street-view-toggle={
+                index === 1
+                  ? "true"
                   : undefined
               }
               data-basemap-selector={
@@ -575,8 +608,10 @@ export function CustomerTracksWorkspace({
                   : undefined
               }
               style={
-                index === 4 &&
-                isBasemapMenuOpen
+                (index === 1 &&
+                  isStreetViewActive) ||
+                (index === 4 &&
+                  isBasemapMenuOpen)
                   ? {
                       backgroundColor: "#357cf4",
                       color: "#ffffff",

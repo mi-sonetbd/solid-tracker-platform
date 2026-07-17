@@ -1,8 +1,8 @@
-# Shared Map Provider Selector
+# Shared Map Provider and Street View Controls
 
 ## Scope
 
-The same provider selector is available on:
+The same map controls are available on:
 
 ```text
 /monitor
@@ -10,32 +10,50 @@ The same provider selector is available on:
 /tracks
 ```
 
-## Provider choices
+## Provider selector
 
-1. **Google Map (Street)**
-   - Google `ROADMAP`.
-2. **Google Map (Hybrid)**
-   - Google satellite imagery with Google road and place labels.
-3. **Google Map (Satellite)**
-   - Google satellite imagery without the hybrid label overlay.
-4. **OpenStreet Map (Hybrid)**
-   - Esri World Imagery with Esri World Boundaries and Places labels.
-5. **OpenStreet Map (Satellite)**
-   - Esri World Imagery without the reference-label overlay.
+The existing Layers button opens the five-provider radio menu:
 
-Google Map (Street) means the normal Google road map. It does not enable the
-separate Street View panorama experience.
+1. Google Map (Street)
+2. Google Map (Hybrid)
+3. Google Map (Satellite)
+4. OpenStreet Map (Hybrid) â€” Esri imagery with labels
+5. OpenStreet Map (Satellite) â€” Esri imagery
 
-OpenStreetMap does not provide an official satellite imagery service. The
-non-Google satellite choices use Esri services and display the real provider
-under the customer-facing menu name.
+## Street View controller
 
-## Controls
+The second existing right-side map-controller button is the Street View toggle.
 
-The provider radio menu opens from the existing Layers icon.
+```text
+First click  â†’ Open nearest Street View
+Second click â†’ Exit Street View
+```
 
-Zoom in and zoom out remain integrated into the existing right-side toolbar.
-The separate bottom-right custom zoom control remains removed.
+The button is highlighted blue while Street View is active.
 
-Google built-in default controls remain disabled. Required Google attribution,
-map-data, terms, and provider notices remain visible.
+Opening the provider selector exits Street View. Opening Street View closes the
+provider selector.
+
+## Street View lookup
+
+The shared map searches for the nearest outdoor panorama within 1,000 meters of
+the current map center using `StreetViewService.getPanorama()`.
+
+When imagery is found, the map's default Street View panorama is displayed.
+When no panorama exists in the search radius, the map remains visible.
+
+Street View availability depends on Google's imagery coverage for the selected
+location.
+
+## Existing behavior preserved
+
+The feature preserves:
+
+- all five basemap providers;
+- integrated right-side zoom controls;
+- selected-position focusing;
+- location overlay and information window;
+- responsive resizing;
+- property-drawer behavior;
+- Google and Esri attribution;
+- one shared implementation across Monitor, Alerts, and Tracks.

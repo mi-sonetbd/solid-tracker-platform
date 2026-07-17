@@ -20,6 +20,7 @@ type TrackingMapProps = {
   selectedPosition?: TrackingMapPosition | null;
   basemap?: TrackingMapBasemap;
   zoomCommand?: TrackingMapZoomCommand | null;
+  streetViewActive?: boolean;
 };
 
 type MapLoadState =
@@ -178,6 +179,7 @@ export default function TrackingMap({
   selectedPosition = null,
   basemap = "google-hybrid",
   zoomCommand = null,
+  streetViewActive = false,
 }: TrackingMapProps) {
   const containerRef =
     useRef<HTMLDivElement | null>(null);
@@ -185,6 +187,10 @@ export default function TrackingMap({
     useRef<google.maps.Map | null>(null);
   const esriReferenceRef =
     useRef<google.maps.ImageMapType | null>(
+      null,
+    );
+  const streetViewServiceRef =
+    useRef<google.maps.StreetViewService | null>(
       null,
     );
   const positionCircleRef =
@@ -247,7 +253,10 @@ export default function TrackingMap({
           googleMapsApiKey,
         );
 
-        await importLibrary("maps");
+        await Promise.all([
+          importLibrary("maps"),
+          importLibrary("streetView"),
+        ]);
 
         if (
           disposed ||
@@ -284,6 +293,25 @@ export default function TrackingMap({
 
         esriReferenceRef.current =
           esriReference;
+        streetViewServiceRef.current =
+          new google.maps.StreetViewService();
+
+        const panorama =
+          map.getStreetView();
+
+        panorama.setOptions({
+          addressControl: true,
+          clickToGo: true,
+          disableDefaultUI: false,
+          enableCloseButton: false,
+          fullscreenControl: false,
+          linksControl: true,
+          motionTracking: false,
+          motionTrackingControl: false,
+          panControl: true,
+          zoomControl: true,
+        });
+
         mapRef.current = map;
 
         resizeObserver = new ResizeObserver(
@@ -366,8 +394,15 @@ export default function TrackingMap({
           );
       }
 
+      if (mapRef.current) {
+        mapRef.current
+          .getStreetView()
+          .setVisible(false);
+      }
+
       mapRef.current = null;
       esriReferenceRef.current = null;
+      streetViewServiceRef.current = null;
     };
   }, [
     apiKey,
@@ -421,6 +456,90 @@ export default function TrackingMap({
   }, [
     loadState,
     zoomCommand,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const service =
+      streetViewServiceRef.current;
+
+    if (
+      !map ||
+      !service ||
+      loadState !== "ready"
+    ) {
+      return;
+    }
+
+    const streetViewService = service;
+    const panorama =
+      map.getStreetView();
+
+    if (!streetViewActive) {
+      panorama.setVisible(false);
+      return;
+    }
+
+    const center = map.getCenter();
+
+    if (!center) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function showStreetView() {
+      try {
+        const response =
+          await streetViewService.getPanorama({
+            location: center,
+            preference:
+              google.maps
+                .StreetViewPreference
+                .NEAREST,
+            radius: 1000,
+            sources: [
+              google.maps
+                .StreetViewSource
+                .OUTDOOR,
+            ],
+          });
+
+        if (cancelled) {
+          return;
+        }
+
+        const location =
+          response.data.location;
+
+        if (!location?.pano) {
+          panorama.setVisible(false);
+          return;
+        }
+
+        panorama.setPano(
+          location.pano,
+        );
+        panorama.setPov({
+          heading: 0,
+          pitch: 0,
+        });
+        panorama.setVisible(true);
+      } catch {
+        if (!cancelled) {
+          panorama.setVisible(false);
+        }
+      }
+    }
+
+    void showStreetView();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loadState,
+    streetViewActive,
   ]);
 
   useEffect(() => {
