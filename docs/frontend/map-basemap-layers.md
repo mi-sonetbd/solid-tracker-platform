@@ -1,8 +1,8 @@
-# Shared Google Maps Basemap
+# Shared Map Provider Selector
 
 ## Scope
 
-The shared Google tracking map is used on:
+The same provider selector is available on:
 
 ```text
 /monitor
@@ -10,54 +10,49 @@ The shared Google tracking map is used on:
 /tracks
 ```
 
-## Single basemap toggle
+## Reference-style selector
 
-The existing `Layers3` button remains the only basemap control.
+Clicking the existing Layers icon opens a white radio-list panel beside the
+right-side toolbar. Selecting an option applies it immediately and closes the
+panel.
 
-```text
-Google Roadmap â†’ Google Hybrid
-Google Hybrid â†’ Google Roadmap
-```
+## Provider choices
 
-The customer-facing behavior is still described as Map and Satellite.
+1. **Google Map (Hybrid)**
+   - Google satellite imagery with Google road and place labels.
+2. **Google Map (Satellite)**
+   - Google satellite imagery without the hybrid label overlay.
+3. **OpenStreet Map (Hybrid)**
+   - Esri World Imagery with Esri World Boundaries and Places labels.
+4. **OpenStreet Map (Satellite)**
+   - Esri World Imagery without the reference-label overlay.
 
-## Map types
+OpenStreetMap does not provide an official satellite imagery service. The menu
+keeps the requested customer-facing OpenStreet names and shows the actual Esri
+provider beneath the non-Google choices.
 
-### Map
+## Integrated controls
 
-```text
-google.maps.MapTypeId.ROADMAP
-```
+The separate bottom-right Solid Tracker zoom stack is removed from the shared
+map renderer.
 
-### Satellite with labels
+Zoom in and zoom out are placed at the bottom of the existing right-side
+toolbar, matching the supplied reference interface.
 
-```text
-google.maps.MapTypeId.HYBRID
-```
+Google's built-in default controls remain disabled. Required Google attribution,
+map-data, terms, and provider notices remain visible.
 
-Google `HYBRID` combines satellite imagery with road, place, and other
-basemap labels. Plain `SATELLITE` is not used because it omits those labels.
+## Shared behavior
 
-## Loading behavior
+The shared map preserves:
 
-Satellite imagery uses photographic tiles and may load more slowly than the
-roadmap, especially on the first view or after moving to a new area. The same
-Google map instance is retained when changing the map type so the application
-does not recreate the map during each toggle.
-
-## Zoom controls
-
-Solid Tracker keeps its custom bottom-right zoom controls. The zoom-out control
-uses an ASCII hyphen so it renders correctly regardless of source encoding.
-
-## Existing behavior preserved
-
-The refinement does not change:
-
-- the single `Layers3` toggle;
+- Google Hybrid;
+- Google Satellite;
+- Esri World Imagery;
+- Esri imagery with reference labels;
 - selected-position focusing;
-- location overlays and information windows;
+- location overlay and information window;
 - resize handling;
-- property-drawer control positioning;
-- API-key handling;
-- Google Maps loading and runtime-error states.
+- property-drawer behavior;
+- one map instance while changing providers;
+- toolbar-driven zoom commands.

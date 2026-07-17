@@ -4,4 +4,13 @@ export type TrackingMapPosition = {
   label: string;
 };
 
-export type TrackingMapBasemap = "map" | "satellite";
+export type TrackingMapBasemap =
+  | "google-hybrid"
+  | "google-satellite"
+  | "openstreet-hybrid"
+  | "openstreet-satellite";
+
+export type TrackingMapZoomCommand = {
+  id: number;
+  delta: 1 | -1;
+};

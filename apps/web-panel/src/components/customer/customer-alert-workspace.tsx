@@ -21,7 +21,12 @@ import {
   type ReactNode,
 } from "react";
 import { CustomerMonitorRail } from "@/components/customer/customer-monitor-rail";
+import { CustomerMapProviderSelector } from "@/components/customer/customer-map-provider-selector";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
+import type {
+  TrackingMapBasemap,
+  TrackingMapZoomCommand,
+} from "@/components/map/tracking-map-types";
 import {
   activeDeviceAssignment,
   deviceDisplayName,
@@ -116,7 +121,18 @@ export function CustomerAlertWorkspace({
   canViewLocation,
   initialVehicleId,
 }: CustomerAlertWorkspaceProps) {
-  const [basemap, setBasemap] = useState<"map" | "satellite">("map");
+  const [basemap, setBasemap] =
+    useState<TrackingMapBasemap>(
+      "google-hybrid",
+    );
+  const [
+    isBasemapMenuOpen,
+    setIsBasemapMenuOpen,
+  ] = useState(false);
+  const [zoomCommand, setZoomCommand] =
+    useState<TrackingMapZoomCommand | null>(
+      null,
+    );
   const {
     vehicles,
     loading,
@@ -336,6 +352,7 @@ export function CustomerAlertWorkspace({
         <TrackingMapClient
           selectedPosition={null}
           basemap={basemap}
+          zoomCommand={zoomCommand}
         />
 
         <label className="absolute left-3 top-3 z-[1000] flex h-8 w-[220px] items-center rounded-[3px] bg-white px-3 shadow-[0_2px_8px_rgba(35,61,102,0.16)]">
@@ -352,7 +369,17 @@ export function CustomerAlertWorkspace({
         </label>
 
         <div className="absolute right-3 top-4 z-[1000] flex flex-col gap-2">
-          {mapTools.map((Icon, index) => (
+                    <CustomerMapProviderSelector
+            id="alerts-map-provider"
+            open={isBasemapMenuOpen}
+            value={basemap}
+            onChange={(nextBasemap) => {
+              setBasemap(nextBasemap);
+              setIsBasemapMenuOpen(false);
+            }}
+          />
+
+{mapTools.map((Icon, index) => (
             <button
               key={index}
               type="button"
@@ -361,40 +388,39 @@ export function CustomerAlertWorkspace({
               }
               onClick={() => {
                 if (index === 4) {
-                  setBasemap((current) =>
-                    current === "map"
-                      ? "satellite"
-                      : "map",
+                  setIsBasemapMenuOpen(
+                    (current) => !current,
                   );
                 }
               }}
-              aria-pressed={
+              aria-expanded={
                 index === 4
-                  ? basemap === "satellite"
+                  ? isBasemapMenuOpen
+                  : undefined
+              }
+              aria-controls={
+                index === 4
+                  ? "alerts-map-provider-panel"
                   : undefined
               }
               aria-label={
                 index === 4
-                  ? basemap === "map"
-                    ? "Switch to satellite view"
-                    : "Switch to map view"
+                  ? "Choose map provider"
                   : `Alert map tool ${index + 1}`
               }
               title={
                 index === 4
-                  ? basemap === "map"
-                    ? "Switch to satellite view"
-                    : "Switch to map view"
+                  ? "Choose map provider"
                   : undefined
               }
-              data-basemap-toggle={
+              data-basemap-selector={
                 index === 4
                   ? "true"
                   : undefined
               }
               style={
                 index === 4 &&
-                basemap === "satellite"
+                isBasemapMenuOpen
                   ? {
                       backgroundColor: "#357cf4",
                       color: "#ffffff",
@@ -414,6 +440,36 @@ export function CustomerAlertWorkspace({
               <Icon className="h-4 w-4" />
             </button>
           ))}
+
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            onClick={() =>
+              setZoomCommand((current) => ({
+                id: (current?.id ?? 0) + 1,
+                delta: 1,
+              }))
+            }
+            className="grid h-8 w-8 place-items-center rounded-[3px] border border-[#d7dfeb] bg-white text-[20px] font-medium leading-none text-[#52698e] shadow-[0_2px_8px_rgba(35,61,102,0.16)] transition hover:bg-[#f2f6fb]"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+
+          <button
+            type="button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            onClick={() =>
+              setZoomCommand((current) => ({
+                id: (current?.id ?? 0) + 1,
+                delta: -1,
+              }))
+            }
+            className="grid h-8 w-8 place-items-center rounded-[3px] border border-[#d7dfeb] bg-white text-[20px] font-medium leading-none text-[#52698e] shadow-[0_2px_8px_rgba(35,61,102,0.16)] transition hover:bg-[#f2f6fb]"
+          >
+            <span aria-hidden="true">-</span>
+          </button>
         </div>
 
         <div className="absolute bottom-3 left-3 z-[1000] flex h-8 min-w-[86px] items-center justify-between rounded-[3px] bg-white px-3 text-[10px] text-[#52698e] shadow-[0_2px_8px_rgba(35,61,102,0.16)]">

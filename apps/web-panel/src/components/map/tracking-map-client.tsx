@@ -4,11 +4,13 @@ import dynamic from "next/dynamic";
 import type {
   TrackingMapBasemap,
   TrackingMapPosition,
+  TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
 
 type TrackingMapClientProps = {
   selectedPosition?: TrackingMapPosition | null;
   basemap?: TrackingMapBasemap;
+  zoomCommand?: TrackingMapZoomCommand | null;
 };
 
 const TrackingMap = dynamic<TrackingMapClientProps>(

@@ -13,11 +13,13 @@ import {
 import type {
   TrackingMapBasemap,
   TrackingMapPosition,
+  TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
 
 type TrackingMapProps = {
   selectedPosition?: TrackingMapPosition | null;
   basemap?: TrackingMapBasemap;
+  zoomCommand?: TrackingMapZoomCommand | null;
 };
 
 type MapLoadState =
@@ -32,9 +34,12 @@ declare global {
 }
 
 const defaultCenter: google.maps.LatLngLiteral = {
-  lat: 20,
-  lng: 0,
+  lat: 23.8103,
+  lng: 90.4125,
 };
+
+const esriImageryMapTypeId =
+  "solid-tracker-esri-imagery";
 
 function configureGoogleMaps(apiKey: string) {
   if (
@@ -52,22 +57,130 @@ function configureGoogleMaps(apiKey: string) {
     true;
 }
 
-function mapTypeForBasemap(
-  basemap: TrackingMapBasemap,
+function normalizedTileUrl(
+  serviceName: string,
+  coordinate: google.maps.Point,
+  zoom: number,
 ) {
-  return basemap === "satellite"
-    ? google.maps.MapTypeId.HYBRID
-    : google.maps.MapTypeId.ROADMAP;
+  const scale = 1 << zoom;
+
+  if (
+    coordinate.y < 0 ||
+    coordinate.y >= scale
+  ) {
+    return "";
+  }
+
+  const x =
+    ((coordinate.x % scale) + scale) %
+    scale;
+
+  return [
+    "https://server.arcgisonline.com",
+    "ArcGIS",
+    "rest",
+    "services",
+    serviceName,
+    "MapServer",
+    "tile",
+    String(zoom),
+    String(coordinate.y),
+    String(x),
+  ].join("/");
+}
+
+function createEsriImageryType() {
+  return new google.maps.ImageMapType({
+    alt: "Esri World Imagery",
+    name: "OpenStreet Satellite",
+    tileSize: new google.maps.Size(
+      256,
+      256,
+    ),
+    minZoom: 0,
+    maxZoom: 19,
+    getTileUrl: (coordinate, zoom) =>
+      normalizedTileUrl(
+        "World_Imagery",
+        coordinate,
+        zoom,
+      ),
+  });
+}
+
+function createEsriReferenceType() {
+  return new google.maps.ImageMapType({
+    alt: "Esri boundaries and places",
+    name: "OpenStreet Hybrid labels",
+    tileSize: new google.maps.Size(
+      256,
+      256,
+    ),
+    minZoom: 0,
+    maxZoom: 19,
+    getTileUrl: (coordinate, zoom) =>
+      normalizedTileUrl(
+        "Reference/World_Boundaries_and_Places",
+        coordinate,
+        zoom,
+      ),
+  });
+}
+
+function applyBasemap(
+  map: google.maps.Map,
+  basemap: TrackingMapBasemap,
+  esriReference:
+    google.maps.ImageMapType | null,
+) {
+  map.overlayMapTypes.clear();
+
+  switch (basemap) {
+    case "google-satellite":
+      map.setMapTypeId(
+        google.maps.MapTypeId.SATELLITE,
+      );
+      return;
+
+    case "openstreet-hybrid":
+      map.setMapTypeId(
+        esriImageryMapTypeId,
+      );
+
+      if (esriReference) {
+        map.overlayMapTypes.push(
+          esriReference,
+        );
+      }
+      return;
+
+    case "openstreet-satellite":
+      map.setMapTypeId(
+        esriImageryMapTypeId,
+      );
+      return;
+
+    case "google-hybrid":
+    default:
+      map.setMapTypeId(
+        google.maps.MapTypeId.HYBRID,
+      );
+  }
 }
 
 export default function TrackingMap({
   selectedPosition = null,
-  basemap = "map",
+  basemap = "google-hybrid",
+  zoomCommand = null,
 }: TrackingMapProps) {
   const containerRef =
     useRef<HTMLDivElement | null>(null);
   const mapRef =
     useRef<google.maps.Map | null>(null);
+  const esriReferenceRef =
+    useRef<google.maps.ImageMapType | null>(
+      null,
+    );
   const positionCircleRef =
     useRef<google.maps.Circle | null>(null);
   const positionClickListenerRef =
@@ -75,11 +188,15 @@ export default function TrackingMap({
       null,
     );
   const infoWindowRef =
-    useRef<google.maps.InfoWindow | null>(null);
+    useRef<google.maps.InfoWindow | null>(
+      null,
+    );
+
   const apiKey =
     process.env
       .NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
       ?.trim();
+
   const [loadState, setLoadState] =
     useState<MapLoadState>(
       apiKey ? "loading" : "error",
@@ -106,28 +223,30 @@ export default function TrackingMap({
   useEffect(() => {
     const container = containerRef.current;
 
-    if (!container) {
+    if (!container || !apiKey) {
       return;
     }
 
-    if (!apiKey) {
-      return;
-    }
-
-    const googleMapsApiKey = apiKey;
     const mapContainer = container;
+    const googleMapsApiKey = apiKey;
 
     let disposed = false;
     let resizeFrame: number | null = null;
-    let resizeObserver: ResizeObserver | null =
-      null;
+    let resizeObserver:
+      ResizeObserver | null = null;
 
     async function initializeMap() {
       try {
-        configureGoogleMaps(googleMapsApiKey);
+        configureGoogleMaps(
+          googleMapsApiKey,
+        );
+
         await importLibrary("maps");
 
-        if (disposed || !mapContainer.isConnected) {
+        if (
+          disposed ||
+          !mapContainer.isConnected
+        ) {
           return;
         }
 
@@ -135,21 +254,30 @@ export default function TrackingMap({
           mapContainer,
           {
             center: defaultCenter,
-            zoom: 2,
+            zoom: 13,
             minZoom: 2,
             mapTypeId:
-              google.maps.MapTypeId.ROADMAP,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-            zoomControl: false,
+              google.maps.MapTypeId.HYBRID,
+            disableDefaultUI: true,
+            keyboardShortcuts: false,
             clickableIcons: false,
             gestureHandling: "greedy",
-            keyboardShortcuts: true,
             backgroundColor: "#a9d5df",
           },
         );
 
+        const esriImagery =
+          createEsriImageryType();
+        const esriReference =
+          createEsriReferenceType();
+
+        map.mapTypes.set(
+          esriImageryMapTypeId,
+          esriImagery,
+        );
+
+        esriReferenceRef.current =
+          esriReference;
         mapRef.current = map;
 
         resizeObserver = new ResizeObserver(
@@ -162,13 +290,15 @@ export default function TrackingMap({
             }
 
             if (resizeFrame !== null) {
-              cancelAnimationFrame(resizeFrame);
+              cancelAnimationFrame(
+                resizeFrame,
+              );
             }
 
             const center = map.getCenter();
 
-            resizeFrame = requestAnimationFrame(
-              () => {
+            resizeFrame =
+              requestAnimationFrame(() => {
                 if (
                   disposed ||
                   mapRef.current !== map
@@ -184,12 +314,13 @@ export default function TrackingMap({
                 if (center) {
                   map.setCenter(center);
                 }
-              },
-            );
+              });
           },
         );
 
-        resizeObserver.observe(mapContainer);
+        resizeObserver.observe(
+          mapContainer,
+        );
 
         setLoadError("");
         setLoadState("ready");
@@ -214,19 +345,23 @@ export default function TrackingMap({
       disposed = true;
 
       if (resizeFrame !== null) {
-        cancelAnimationFrame(resizeFrame);
+        cancelAnimationFrame(
+          resizeFrame,
+        );
       }
 
       resizeObserver?.disconnect();
       clearPositionOverlay();
 
       if (mapRef.current) {
-        google.maps.event.clearInstanceListeners(
-          mapRef.current,
-        );
+        google.maps.event
+          .clearInstanceListeners(
+            mapRef.current,
+          );
       }
 
       mapRef.current = null;
+      esriReferenceRef.current = null;
     };
   }, [
     apiKey,
@@ -236,14 +371,51 @@ export default function TrackingMap({
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || loadState !== "ready") {
+    if (
+      !map ||
+      loadState !== "ready"
+    ) {
       return;
     }
 
-    map.setMapTypeId(
-      mapTypeForBasemap(basemap),
+    applyBasemap(
+      map,
+      basemap,
+      esriReferenceRef.current,
     );
-  }, [basemap, loadState]);
+  }, [
+    basemap,
+    loadState,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (
+      !map ||
+      loadState !== "ready" ||
+      !zoomCommand
+    ) {
+      return;
+    }
+
+    const currentZoom =
+      map.getZoom() ?? 13;
+
+    map.setZoom(
+      Math.max(
+        2,
+        Math.min(
+          21,
+          currentZoom +
+            zoomCommand.delta,
+        ),
+      ),
+    );
+  }, [
+    loadState,
+    zoomCommand,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -267,18 +439,19 @@ export default function TrackingMap({
     map.setCenter(position);
     map.setZoom(16);
 
-    const circle = new google.maps.Circle({
-      map,
-      center: position,
-      radius: 12,
-      strokeColor: "#ffffff",
-      strokeOpacity: 1,
-      strokeWeight: 3,
-      fillColor: "#ff3152",
-      fillOpacity: 1,
-      clickable: true,
-      zIndex: 1000,
-    });
+    const circle =
+      new google.maps.Circle({
+        map,
+        center: position,
+        radius: 12,
+        strokeColor: "#ffffff",
+        strokeOpacity: 1,
+        strokeWeight: 3,
+        fillColor: "#ff3152",
+        fillOpacity: 1,
+        clickable: true,
+        zIndex: 1000,
+      });
 
     const content =
       document.createElement("div");
@@ -295,15 +468,16 @@ export default function TrackingMap({
         disableAutoPan: false,
       });
 
-    const clickListener = circle.addListener(
-      "click",
-      () => {
-        infoWindow.open({
-          map,
-          shouldFocus: false,
-        });
-      },
-    );
+    const clickListener =
+      circle.addListener(
+        "click",
+        () => {
+          infoWindow.open({
+            map,
+            shouldFocus: false,
+          });
+        },
+      );
 
     positionCircleRef.current = circle;
     infoWindowRef.current = infoWindow;
@@ -317,57 +491,28 @@ export default function TrackingMap({
     selectedPosition,
   ]);
 
-  function changeZoom(delta: number) {
-    const map = mapRef.current;
-
-    if (!map) {
-      return;
-    }
-
-    const currentZoom = map.getZoom() ?? 2;
-    const nextZoom = Math.max(
-      2,
-      Math.min(21, currentZoom + delta),
-    );
-
-    map.setZoom(nextZoom);
-  }
+  const usesEsri =
+    basemap === "openstreet-hybrid" ||
+    basemap === "openstreet-satellite";
 
   return (
     <div className="relative h-full w-full bg-[#a9d5df]">
       <div
         ref={containerRef}
         className="h-full w-full"
-        aria-label="Google tracking map"
+        aria-label="Tracking map"
       />
 
-      <div className="solid-tracker-map-controls absolute bottom-6 right-0 z-[10] flex flex-col overflow-hidden rounded-[3px] border border-[#d7dfeb] bg-white shadow-[0_2px_8px_rgba(35,61,102,0.18)]">
-        <button
-          type="button"
-          aria-label="Zoom in"
-          title="Zoom in"
-          disabled={loadState !== "ready"}
-          onClick={() => changeZoom(1)}
-          className="grid h-8 w-8 place-items-center border-b border-[#e1e7f0] text-lg font-medium leading-none text-[#52698e] transition hover:bg-[#f2f6fb] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <span aria-hidden="true">+</span>
-        </button>
-
-        <button
-          type="button"
-          aria-label="Zoom out"
-          title="Zoom out"
-          disabled={loadState !== "ready"}
-          onClick={() => changeZoom(-1)}
-          className="grid h-8 w-8 place-items-center text-xl font-light leading-none text-[#52698e] transition hover:bg-[#f2f6fb] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <span aria-hidden="true">-</span>
-        </button>
-      </div>
+      {usesEsri &&
+      loadState === "ready" ? (
+        <div className="pointer-events-none absolute bottom-0 left-0 z-[5] bg-white/90 px-1.5 py-0.5 text-[9px] text-[#4d5e79]">
+          Tiles Â© Esri
+        </div>
+      ) : null}
 
       {loadState === "loading" ? (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-[#a9d5df] text-sm font-semibold text-white">
-          Loading Google Maps...
+          Loading map...
         </div>
       ) : null}
 
@@ -375,11 +520,11 @@ export default function TrackingMap({
         <div className="absolute inset-0 grid place-items-center bg-[#eef3f8] px-6 text-center">
           <div className="max-w-md rounded-md border border-[#f0c8cf] bg-white px-5 py-4 shadow-sm">
             <p className="text-sm font-semibold text-[#9d3042]">
-              Google Maps is unavailable
+              Map is unavailable
             </p>
             <p className="mt-2 text-xs leading-5 text-[#71819c]">
               {loadError ||
-                "Verify the API key, Maps JavaScript API, billing, and website restrictions."}
+                "Verify the map provider configuration and network access."}
             </p>
           </div>
         </div>
