@@ -6,5 +6,6 @@ allowBuilds:
   '@prisma/engines': set this to true or false
   '@scarf/scarf': false
   esbuild: set this to true or false
-  prisma: set this to true or false
-  unrs-resolver: set this to true or false
+  prisma: true
+  sharp: true
+  unrs-resolver: false

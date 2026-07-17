@@ -18,11 +18,13 @@ import { RequirePermissions } from '../../identity/common/permissions.decorator'
 import { DeviceQueryDto } from '../common/asset-query.dto';
 import { DevicesService } from './devices.service';
 import { AllocateDeviceDto } from './dto/allocate-device.dto';
+import { BulkRegisterDevicesDto } from './dto/bulk-register-devices.dto';
 import { InstallDeviceDto } from './dto/install-device.dto';
 import { RegisterDeviceDto } from './dto/register-device.dto';
 import { RemoveDeviceDto } from './dto/remove-device.dto';
 import { ReplaceDeviceDto } from './dto/replace-device.dto';
 import { ReturnDeviceDto } from './dto/return-device.dto';
+import { TransferDevicesDto } from './dto/transfer-devices.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 
 @ApiTags('Devices')
@@ -46,6 +48,23 @@ export class DevicesController {
     return this.devicesService.register(auth, dto);
   }
 
+  @Post('bulk')
+  @RequirePermissions('device.register')
+  @ApiOperation({
+    summary: 'Register multiple platform stock devices with per-IMEI results',
+  })
+  bulkRegister(@CurrentAuth() auth: AuthContext, @Body() dto: BulkRegisterDevicesDto) {
+    return this.devicesService.bulkRegister(auth, dto);
+  }
+
+  @Post('transfer')
+  @RequirePermissions('device.remove')
+  @ApiOperation({
+    summary: 'Sell or move eligible devices to a scoped Dealer or Customer',
+  })
+  transfer(@CurrentAuth() auth: AuthContext, @Body() dto: TransferDevicesDto) {
+    return this.devicesService.transfer(auth, dto);
+  }
   @Get(':deviceId')
   @RequirePermissions('device.view')
   @ApiOperation({ summary: 'Read one device within scope' })
