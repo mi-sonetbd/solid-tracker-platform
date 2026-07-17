@@ -136,6 +136,12 @@ function applyBasemap(
   map.overlayMapTypes.clear();
 
   switch (basemap) {
+    case "google-roadmap":
+      map.setMapTypeId(
+        google.maps.MapTypeId.ROADMAP,
+      );
+      return;
+
     case "google-satellite":
       map.setMapTypeId(
         google.maps.MapTypeId.SATELLITE,

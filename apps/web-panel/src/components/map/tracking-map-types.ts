@@ -5,6 +5,7 @@ export type TrackingMapPosition = {
 };
 
 export type TrackingMapBasemap =
+  | "google-roadmap"
   | "google-hybrid"
   | "google-satellite"
   | "openstreet-hybrid"

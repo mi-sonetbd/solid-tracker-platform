@@ -19,6 +19,10 @@ const providerOptions: Array<{
   detail?: string;
 }> = [
   {
+    value: "google-roadmap",
+    label: "Google Map (Street)",
+  },
+  {
     value: "google-hybrid",
     label: "Google Map (Hybrid)",
   },
