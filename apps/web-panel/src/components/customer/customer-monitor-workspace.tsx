@@ -22,6 +22,7 @@ import {
   Signal,
   SlidersHorizontal,
   Target,
+  Route,
 } from "lucide-react";
 import {
   useMemo,
@@ -61,7 +62,7 @@ const mapTools = [
   LocateFixed,
   MapPinned,
   SlidersHorizontal,
-  Target,
+  Route,
   Layers3,
 ];
 
@@ -359,6 +360,10 @@ export function CustomerMonitorWorkspace({
     isStreetViewActive,
     setIsStreetViewActive,
   ] = useState(false);
+  const [
+    isTrafficActive,
+    setIsTrafficActive,
+  ] = useState(false);
   const {
     vehicles,
     loading,
@@ -461,6 +466,9 @@ export function CustomerMonitorWorkspace({
           streetViewActive={
             isStreetViewActive
           }
+          trafficActive={
+            isTrafficActive
+          }
         />
 
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2">
@@ -519,6 +527,12 @@ export function CustomerMonitorWorkspace({
                   );
                 }
 
+                if (index === 3) {
+                  setIsTrafficActive(
+                    (current) => !current,
+                  );
+                }
+
                 if (index === 4) {
                   setIsStreetViewActive(false);
                   setIsBasemapMenuOpen(
@@ -529,7 +543,9 @@ export function CustomerMonitorWorkspace({
               aria-pressed={
                 index === 1
                   ? isStreetViewActive
-                  : undefined
+                  : index === 3
+                    ? isTrafficActive
+                    : undefined
               }
               aria-expanded={
                 index === 4
@@ -546,21 +562,34 @@ export function CustomerMonitorWorkspace({
                   ? isStreetViewActive
                     ? "Exit Street View"
                     : "Select Street View point"
-                  : index === 4
-                    ? "Choose map provider"
-                    : `Map tool ${index + 1}`
+                  : index === 3
+                    ? isTrafficActive
+                      ? "Hide traffic"
+                      : "Show traffic"
+                    : index === 4
+                      ? "Choose map provider"
+                      : `Map tool ${index + 1}`
               }
               title={
                 index === 1
                   ? isStreetViewActive
                     ? "Exit Street View"
                     : "Select Street View point"
-                  : index === 4
-                    ? "Choose map provider"
-                    : undefined
+                  : index === 3
+                    ? isTrafficActive
+                      ? "Hide traffic"
+                      : "Show traffic"
+                    : index === 4
+                      ? "Choose map provider"
+                      : undefined
               }
               data-street-view-toggle={
                 index === 1
+                  ? "true"
+                  : undefined
+              }
+              data-traffic-toggle={
+                index === 3
                   ? "true"
                   : undefined
               }
@@ -572,6 +601,8 @@ export function CustomerMonitorWorkspace({
               style={
                 (index === 1 &&
                   isStreetViewActive) ||
+                (index === 3 &&
+                  isTrafficActive) ||
                 (index === 4 &&
                   isBasemapMenuOpen)
                   ? {

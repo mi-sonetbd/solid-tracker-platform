@@ -21,6 +21,7 @@ type TrackingMapProps = {
   basemap?: TrackingMapBasemap;
   zoomCommand?: TrackingMapZoomCommand | null;
   streetViewActive?: boolean;
+  trafficActive?: boolean;
 };
 
 type MapLoadState =
@@ -198,6 +199,7 @@ export default function TrackingMap({
   basemap = "google-hybrid",
   zoomCommand = null,
   streetViewActive = false,
+  trafficActive = false,
 }: TrackingMapProps) {
   const containerRef =
     useRef<HTMLDivElement | null>(null);
@@ -209,6 +211,10 @@ export default function TrackingMap({
     );
   const streetViewServiceRef =
     useRef<google.maps.StreetViewService | null>(
+      null,
+    );
+  const trafficLayerRef =
+    useRef<google.maps.TrafficLayer | null>(
       null,
     );
   const streetViewClickListenerRef =
@@ -355,6 +361,8 @@ export default function TrackingMap({
           esriReference;
         streetViewServiceRef.current =
           new google.maps.StreetViewService();
+        trafficLayerRef.current =
+          new google.maps.TrafficLayer();
 
         const panorama =
           map.getStreetView();
@@ -462,6 +470,8 @@ export default function TrackingMap({
 
       mapRef.current = null;
       esriReferenceRef.current = null;
+      trafficLayerRef.current?.setMap(null);
+      trafficLayerRef.current = null;
       streetViewServiceRef.current = null;
     };
   }, [
@@ -487,6 +497,27 @@ export default function TrackingMap({
   }, [
     basemap,
     loadState,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const trafficLayer =
+      trafficLayerRef.current;
+
+    if (
+      !map ||
+      !trafficLayer ||
+      loadState !== "ready"
+    ) {
+      return;
+    }
+
+    trafficLayer.setMap(
+      trafficActive ? map : null,
+    );
+  }, [
+    loadState,
+    trafficActive,
   ]);
 
   useEffect(() => {

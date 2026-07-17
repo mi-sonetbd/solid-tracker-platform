@@ -13,8 +13,8 @@ import {
   Navigation,
   Search,
   SlidersHorizontal,
-  Target,
   X,
+  Route,
 } from "lucide-react";
 import {
   useMemo,
@@ -50,7 +50,7 @@ const mapTools = [
   LocateFixed,
   MapPinned,
   SlidersHorizontal,
-  Target,
+  Route,
   Layers3,
 ];
 
@@ -149,6 +149,10 @@ export function CustomerTracksWorkspace({
   const [
     isStreetViewActive,
     setIsStreetViewActive,
+  ] = useState(false);
+  const [
+    isTrafficActive,
+    setIsTrafficActive,
   ] = useState(false);
   const {
     vehicles,
@@ -516,6 +520,9 @@ export function CustomerTracksWorkspace({
           streetViewActive={
             isStreetViewActive
           }
+          trafficActive={
+            isTrafficActive
+          }
         />
 
         <label className="absolute left-3 top-3 z-[1000] flex h-8 w-[220px] items-center rounded-[3px] bg-white px-3 shadow-[0_2px_8px_rgba(35,61,102,0.16)]">
@@ -557,6 +564,12 @@ export function CustomerTracksWorkspace({
                   );
                 }
 
+                if (index === 3) {
+                  setIsTrafficActive(
+                    (current) => !current,
+                  );
+                }
+
                 if (index === 4) {
                   setIsStreetViewActive(false);
                   setIsBasemapMenuOpen(
@@ -567,7 +580,9 @@ export function CustomerTracksWorkspace({
               aria-pressed={
                 index === 1
                   ? isStreetViewActive
-                  : undefined
+                  : index === 3
+                    ? isTrafficActive
+                    : undefined
               }
               aria-expanded={
                 index === 4
@@ -584,21 +599,34 @@ export function CustomerTracksWorkspace({
                   ? isStreetViewActive
                     ? "Exit Street View"
                     : "Select Street View point"
-                  : index === 4
-                    ? "Choose map provider"
-                    : `Track map tool ${index + 1}`
+                  : index === 3
+                    ? isTrafficActive
+                      ? "Hide traffic"
+                      : "Show traffic"
+                    : index === 4
+                      ? "Choose map provider"
+                      : `Track map tool ${index + 1}`
               }
               title={
                 index === 1
                   ? isStreetViewActive
                     ? "Exit Street View"
                     : "Select Street View point"
-                  : index === 4
-                    ? "Choose map provider"
-                    : undefined
+                  : index === 3
+                    ? isTrafficActive
+                      ? "Hide traffic"
+                      : "Show traffic"
+                    : index === 4
+                      ? "Choose map provider"
+                      : undefined
               }
               data-street-view-toggle={
                 index === 1
+                  ? "true"
+                  : undefined
+              }
+              data-traffic-toggle={
+                index === 3
                   ? "true"
                   : undefined
               }
@@ -610,6 +638,8 @@ export function CustomerTracksWorkspace({
               style={
                 (index === 1 &&
                   isStreetViewActive) ||
+                (index === 3 &&
+                  isTrafficActive) ||
                 (index === 4 &&
                   isBasemapMenuOpen)
                   ? {

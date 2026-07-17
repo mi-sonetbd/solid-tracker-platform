@@ -12,6 +12,7 @@ type TrackingMapClientProps = {
   basemap?: TrackingMapBasemap;
   zoomCommand?: TrackingMapZoomCommand | null;
   streetViewActive?: boolean;
+  trafficActive?: boolean;
 };
 
 const TrackingMap = dynamic<TrackingMapClientProps>(

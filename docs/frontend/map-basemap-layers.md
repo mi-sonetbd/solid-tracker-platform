@@ -1,8 +1,8 @@
-# Shared Map Provider and Street View Controls
+# Shared Map Provider, Street View, and Traffic Controls
 
 ## Scope
 
-The same controls are available on:
+The same map controls are available on:
 
 ```text
 /monitor
@@ -20,38 +20,44 @@ The Layers controller opens:
 4. OpenStreet Map (Hybrid) â€” Esri imagery with labels
 5. OpenStreet Map (Satellite) â€” Esri imagery
 
-## Street View point selection
+## Street View
 
-The second right-side controller enables Street View point-selection mode.
+The second controller provides the shared Street View behavior. Depending on
+the current branch history, it opens Street View or enables map-point selection.
+
+## Traffic layer
+
+The fourth controller, previously blank, now uses a route icon and controls
+Google Maps `TrafficLayer`.
 
 ```text
-1. Click the Street View controller.
-2. The controller becomes blue and the map cursor becomes a crosshair.
-3. Click the desired location on the map.
-4. A blue location marker appears.
-5. Solid Tracker searches for the nearest outdoor panorama within 1 km.
-6. The panorama opens when coverage exists.
+First click  â†’ Show live traffic overlay
+Second click â†’ Hide traffic overlay
 ```
 
-When coverage does not exist near the selected point, the map remains visible
-and the location marker displays a no-coverage message. Another map point can
-then be selected without leaving selection mode.
+The controller is highlighted blue while traffic is enabled.
 
-Clicking the controller again exits Street View, removes the selection marker,
-removes the map-click listener, restores the normal cursor, and returns to the
-map.
+Traffic is an overlay and does not change the selected road, hybrid, satellite,
+Google, or Esri basemap. The current traffic state is preserved when switching
+between basemap providers.
 
-Opening the provider selector also exits Street View selection.
+Traffic availability and detail depend on Google coverage for the displayed
+area.
 
-## Existing behavior preserved
+## Zoom
+
+Zoom in and zoom out remain integrated at the bottom of the existing right-side
+toolbar. The separate bottom-right custom controller remains removed.
+
+## Shared behavior preserved
 
 The feature preserves:
 
-- all five map providers;
-- integrated right-side zoom controls;
+- all configured map providers;
+- Street View;
 - selected-position focusing;
-- location overlay and information window;
-- responsive resizing and center preservation;
+- location overlays and information windows;
+- responsive resizing;
 - property-drawer behavior;
 - Google and Esri attribution;
 - the shared Monitor, Alerts, and Tracks implementation.
