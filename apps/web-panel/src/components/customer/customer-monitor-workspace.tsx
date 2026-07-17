@@ -370,9 +370,12 @@ export function CustomerMonitorWorkspace({
   ] = useState<TrackingMapLocationStatus>(
     "idle",
   );
+  const [
+    isMyLocationEnabled,
+    setIsMyLocationEnabled,
+  ] = useState(false);
   const isMyLocationActive =
-    myLocationStatus === "locating" ||
-    myLocationStatus === "ready";
+    isMyLocationEnabled;
   const [
     isStreetViewActive,
     setIsStreetViewActive,
@@ -489,6 +492,9 @@ export function CustomerMonitorWorkspace({
           myLocationCommand={
             myLocationCommand
           }
+          myLocationActive={
+            isMyLocationEnabled
+          }
           onMyLocationStatusChange={
             setMyLocationStatus
           }
@@ -546,16 +552,28 @@ export function CustomerMonitorWorkspace({
                 if (index === 0) {
                   setIsBasemapMenuOpen(false);
                   setIsStreetViewActive(false);
-                  setMyLocationStatus(
-                    "locating",
-                  );
-                  setMyLocationCommand(
-                    (current) => ({
-                      id:
-                        (current?.id ?? 0) +
-                        1,
-                    }),
-                  );
+
+                  if (isMyLocationEnabled) {
+                    setIsMyLocationEnabled(false);
+                    setMyLocationStatus(
+                      "idle",
+                    );
+                    setMyLocationCommand(
+                      null,
+                    );
+                  } else {
+                    setIsMyLocationEnabled(true);
+                    setMyLocationStatus(
+                      "locating",
+                    );
+                    setMyLocationCommand(
+                      (current) => ({
+                        id:
+                          (current?.id ?? 0) +
+                          1,
+                      }),
+                    );
+                  }
                 }
 
                 if (index === 1) {
@@ -599,9 +617,11 @@ export function CustomerMonitorWorkspace({
               }
               aria-label={
                 index === 0
-                  ? myLocationStatus ===
-                    "locating"
-                    ? "Finding my location"
+                  ? isMyLocationActive
+                    ? myLocationStatus ===
+                      "locating"
+                      ? "Finding my location"
+                      : "Hide my location"
                     : "Show my location"
                   : index === 1
                     ? isStreetViewActive
@@ -617,9 +637,11 @@ export function CustomerMonitorWorkspace({
               }
               title={
                 index === 0
-                  ? myLocationStatus ===
-                    "locating"
-                    ? "Finding my location"
+                  ? isMyLocationActive
+                    ? myLocationStatus ===
+                      "locating"
+                      ? "Finding my location"
+                      : "Hide my location"
                     : "Show my location"
                   : index === 1
                     ? isStreetViewActive

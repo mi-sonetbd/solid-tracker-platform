@@ -10,52 +10,34 @@ The same controls are available on:
 /tracks
 ```
 
-## Provider list
+## My Location toggle
 
-The provider menu displays only these primary labels:
-
-1. Google Map (Street)
-2. Google Map (Hybrid)
-3. Google Map (Satellite)
-4. OpenStreet Map (Hybrid)
-5. OpenStreet Map (Satellite)
-
-Secondary provider descriptions are not shown in the menu.
-
-## Traffic
-
-The traffic-light controller uses Google Maps `TrafficLayer`.
-
-When traffic is active, the layer is detached and reattached after every
-basemap change. This refreshes the traffic overlay after switching among Google
-Street, Hybrid, and Satellite views.
-
-Traffic remains an overlay and does not replace the selected map provider.
-Traffic detail depends on Google coverage for the displayed area.
-
-## My Location
-
-The top controller is the My Location action.
+The top map controller now uses an explicit enabled/disabled state.
 
 ```text
-1. Click the top location controller.
-2. The browser requests location permission.
-3. The map centers on the current coordinates.
-4. A blue accuracy circle is displayed.
-5. Clicking the circle opens the â€œMy locationâ€ information window.
+First click  â†’ request and display My Location
+Second click â†’ hide My Location and remove its marker
+Third click  â†’ request and display My Location again
 ```
 
-The button is blue while location is being requested and after the current
-location is displayed. Permission, timeout, and unavailable-position errors are
-shown as a small message over the map.
+The controller remains blue while My Location is enabled. After a successful
+request, the button label becomes **Hide my location** instead of remaining
+stuck in a permanent ready state.
 
-## Existing behavior preserved
+Disabling the controller:
 
-- provider selector;
-- Street View;
-- traffic toggle;
+- removes the blue accuracy circle;
+- closes the My Location information window;
+- resets the location status to idle;
+- clears the current location command.
+
+## Other map behavior preserved
+
+- Google traffic refresh after basemap changes;
+- provider list without secondary descriptions;
+- Google Street, Hybrid, and Satellite;
+- Esri Hybrid and Satellite;
+- Street View point selection;
 - integrated zoom controls;
-- selected-position focusing;
-- responsive resizing;
-- Google and Esri attribution;
+- responsive map resize behavior;
 - Monitor, Alerts, and Tracks consistency.

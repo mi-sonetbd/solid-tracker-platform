@@ -25,6 +25,7 @@ type TrackingMapProps = {
   streetViewActive?: boolean;
   trafficActive?: boolean;
   myLocationCommand?: TrackingMapLocationCommand | null;
+  myLocationActive?: boolean;
   onMyLocationStatusChange?: (
     status: TrackingMapLocationStatus,
   ) => void;
@@ -207,6 +208,7 @@ export default function TrackingMap({
   streetViewActive = false,
   trafficActive = false,
   myLocationCommand = null,
+  myLocationActive = false,
   onMyLocationStatusChange,
 }: TrackingMapProps) {
   const containerRef =
@@ -517,9 +519,17 @@ export default function TrackingMap({
 
     if (
       !map ||
-      loadState !== "ready" ||
-      !myLocationCommand
+      loadState !== "ready"
     ) {
+      return;
+    }
+
+    if (!myLocationActive) {
+      clearMyLocationOverlay();
+      return;
+    }
+
+    if (!myLocationCommand) {
       return;
     }
 
@@ -662,6 +672,7 @@ export default function TrackingMap({
   }, [
     clearMyLocationOverlay,
     loadState,
+    myLocationActive,
     myLocationCommand,
     onMyLocationStatusChange,
   ]);

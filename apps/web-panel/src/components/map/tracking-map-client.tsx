@@ -16,6 +16,7 @@ type TrackingMapClientProps = {
   streetViewActive?: boolean;
   trafficActive?: boolean;
   myLocationCommand?: TrackingMapLocationCommand | null;
+  myLocationActive?: boolean;
   onMyLocationStatusChange?: (
     status: TrackingMapLocationStatus,
   ) => void;
