@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  ArrowDownAZ,
-  ArrowUp,
   CarFront,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CirclePlus,
   Eye,
-  Filter,
   Heart,
   Layers3,
   LoaderCircle,
@@ -17,9 +14,7 @@ import {
   MapPinned,
   MoreVertical,
   Pencil,
-  RefreshCw,
   Search,
-  Signal,
   Target,
 } from "lucide-react";
 import {
@@ -48,6 +43,7 @@ import {
   type CustomerVehicleAsset,
 } from "@/lib/customer/customer-asset-types";
 import { useCustomerAssets } from "@/lib/customer/use-customer-assets";
+import { CustomerDevicePanelToolbar, useCustomerDevicePanel } from "@/components/customer/customer-device-panel-toolbar";
 
 type CustomerMonitorWorkspaceProps = {
   canViewVehicles: boolean;
@@ -127,7 +123,6 @@ function CollapsibleObjectPanel({
 }
 
 function CustomerObjectPanel({
-  vehicles,
   filteredVehicles,
   loading,
   error,
@@ -135,7 +130,6 @@ function CustomerObjectPanel({
   selectedVehicleId,
   onSearch,
   onSelectVehicle,
-  onRefresh,
 }: {
   vehicles: CustomerVehicleAsset[];
   filteredVehicles: CustomerVehicleAsset[];
@@ -147,11 +141,13 @@ function CustomerObjectPanel({
   onSelectVehicle: (vehicleId: string) => void;
   onRefresh: () => void;
 }) {
-  const installedCount = vehicles.filter((vehicle) =>
-    Boolean(activeDeviceAssignment(vehicle)),
-  ).length;
 
-  return (
+    const devicePanel =
+    useCustomerDevicePanel(
+      (filteredVehicles) ?? [],
+    );
+
+return (
     <section className="h-full border-r border-[#dce4ef] bg-[#f5f7fb] p-2">
       <div className="flex h-full flex-col overflow-hidden rounded-[5px] border border-[#edf1f6] bg-[#f7f9fc] shadow-[0_2px_8px_rgba(35,61,102,0.06)]">
         <header className="border-b border-[#e1e7f0] bg-white px-3 pb-2.5 pt-3">
@@ -177,62 +173,7 @@ function CustomerObjectPanel({
             Add group
           </button>
 
-          <div className="mt-2.5 flex items-center justify-between text-[10px] text-[#637493]">
-            <div className="flex items-center gap-2.5">
-              <span className="rounded-[3px] bg-[#edf2f8] px-2 py-1 font-semibold text-[#344b72]">
-                All {vehicles.length}
-              </span>
-
-              <span
-                className="flex items-center gap-0.5 font-semibold text-[#30b56a]"
-                title="Online data will be connected with live tracking"
-              >
-                <ArrowUp
-                  className="h-3 w-3"
-                  strokeWidth={2.8}
-                />
-                0
-              </span>
-
-              <span
-                className="flex items-center gap-0.5 font-semibold text-[#ff5b75]"
-                title="Alert data will be connected later"
-              >
-                <Heart
-                  className="h-3 w-3"
-                  fill="currentColor"
-                />
-                0
-              </span>
-
-              <span
-                className="flex items-center gap-0.5 font-semibold text-[#344b72]"
-                title="Installed trackers"
-              >
-                <Signal className="h-3 w-3" />
-                {installedCount}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Eye className="h-3.5 w-3.5" />
-              <Filter className="h-3.5 w-3.5" />
-              <ArrowDownAZ className="h-3.5 w-3.5" />
-              <button
-                type="button"
-                onClick={onRefresh}
-                aria-label="Refresh Customer devices"
-                className="text-[#357cf4]"
-              >
-                <RefreshCw
-                  className={[
-                    "h-3.5 w-3.5",
-                    loading ? "animate-spin" : "",
-                  ].join(" ")}
-                />
-              </button>
-            </div>
-          </div>
+          <CustomerDevicePanelToolbar {...devicePanel.toolbarProps} />
         </header>
 
         <div className="flex h-9 items-center justify-between border-b border-[#e0e6ef] bg-[#edf1f7] px-3 text-[10px] font-medium text-[#536889]">
@@ -265,7 +206,7 @@ function CustomerObjectPanel({
             </div>
           ) : (
             <div className="overflow-hidden rounded-[4px] border border-[#dfe6ef] bg-white">
-              {filteredVehicles.map((vehicle) => {
+              {devicePanel.items.map((vehicle) => {
                 const assignment =
                   activeDeviceAssignment(vehicle);
                 const selected =
