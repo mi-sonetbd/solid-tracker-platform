@@ -2,7 +2,7 @@
 
 ## Scope
 
-Map and Satellite selection is available on:
+A single basemap toggle is available on:
 
 ```text
 /monitor
@@ -10,46 +10,39 @@ Map and Satellite selection is available on:
 /tracks
 ```
 
-## Existing toolbar controls
+## Existing toolbar toggle
 
-No additional Leaflet layer-control button is rendered.
+No native Leaflet layer selector and no separate Map button are rendered.
 
-The existing right-side map toolbar provides the selection:
+The existing `Layers3` toolbar button toggles:
 
-- `Layers3` selects **Satellite view**;
-- `Map` selects **Map view**.
+```text
+Map â†’ Satellite
+Satellite â†’ Map
+```
 
-The selected basemap button uses the existing active blue treatment.
+Its accessible label and tooltip describe the next available view.
+
+The button is highlighted blue while Satellite is active and returns to its
+normal appearance while Map is active.
 
 ## Basemap providers
 
-### Map view
-
-OpenStreetMap street tiles are used.
-
-### Satellite view
-
-Esri World Imagery is used.
+- Map: OpenStreetMap
+- Satellite: Esri World Imagery
 
 ## Shared map flow
 
-Each customer workspace owns its selected basemap state and passes it through
-`TrackingMapClient` to the shared `TrackingMap` component. The map component
-renders exactly one `TileLayer` based on that state.
-
-## Google Maps boundary
-
-Unofficial Google tile URLs are not used. Exact Google imagery requires an
-official Google Maps Platform integration with billing, an API key, and Map
-Tiles API session handling.
+Each customer workspace owns the current basemap and passes it through
+`TrackingMapClient` to `TrackingMap`. The shared map renders one tile layer.
 
 ## Leaflet safety
 
-The basemap selection does not change:
+The toggle does not change:
 
 - `TrackingMapController`;
-- selected-position focus;
+- position focusing;
 - resize handling;
 - markers and popups;
 - disabled map animations;
-- React Leaflet map ownership and teardown behavior.
+- React Leaflet map ownership or teardown behavior.

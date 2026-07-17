@@ -14,7 +14,6 @@ import {
   Layers3,
   LoaderCircle,
   LocateFixed,
-  Map,
   MapPinned,
   MoreVertical,
   Pencil,
@@ -59,7 +58,6 @@ const mapTools = [
   SlidersHorizontal,
   Target,
   Layers3,
-  Map,
 ];
 
 function CollapsibleObjectPanel({
@@ -480,46 +478,47 @@ export function CustomerMonitorWorkspace({
                 !canViewLocation && index === 0
               }
               onClick={() => {
-                              if (index === 4) {
-                                setBasemap("satellite");
-                              }
-
-                              if (index === 5) {
-                                setBasemap("map");
-                              }
-                            }}
-                            aria-pressed={
-                              index === 4
-                                ? basemap === "satellite"
-                                : index === 5
-                                  ? basemap === "map"
-                                  : undefined
-                            }
-                            aria-label={
-                              index === 4
-                                ? "Satellite view"
-                                : index === 5
-                                  ? "Map view"
-                                  : `Map tool ${index + 1}`
-                            }
-                            title={
-                              index === 4
-                                ? "Satellite view"
-                                : index === 5
-                                  ? "Map view"
-                                  : undefined
-                            }
-                            style={
-                              (index === 4 &&
-                                basemap === "satellite") ||
-                              (index === 5 &&
-                                basemap === "map")
-                                ? {
-                                    backgroundColor: "#357cf4",
-                                    color: "#ffffff",
-                                  }
-                                : undefined
-                            }
+                if (index === 4) {
+                  setBasemap((current) =>
+                    current === "map"
+                      ? "satellite"
+                      : "map",
+                  );
+                }
+              }}
+              aria-pressed={
+                index === 4
+                  ? basemap === "satellite"
+                  : undefined
+              }
+              aria-label={
+                index === 4
+                  ? basemap === "map"
+                    ? "Switch to satellite view"
+                    : "Switch to map view"
+                  : `Map tool ${index + 1}`
+              }
+              title={
+                index === 4
+                  ? basemap === "map"
+                    ? "Switch to satellite view"
+                    : "Switch to map view"
+                  : undefined
+              }
+              data-basemap-toggle={
+                index === 4
+                  ? "true"
+                  : undefined
+              }
+              style={
+                index === 4 &&
+                basemap === "satellite"
+                  ? {
+                      backgroundColor: "#357cf4",
+                      color: "#ffffff",
+                    }
+                  : undefined
+              }
               className={[
                 "grid h-8 w-8 place-items-center rounded-[3px] border border-[#e1e7f0] bg-white text-[#405779] shadow-[0_2px_8px_rgba(35,61,102,0.16)]",
                 index === 3
