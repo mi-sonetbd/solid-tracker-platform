@@ -1,10 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { TrackingMapPosition } from "@/components/map/tracking-map-types";
+import type {
+  TrackingMapBasemap,
+  TrackingMapPosition,
+} from "@/components/map/tracking-map-types";
 
 type TrackingMapClientProps = {
   selectedPosition?: TrackingMapPosition | null;
+  basemap?: TrackingMapBasemap;
 };
 
 const TrackingMap = dynamic<TrackingMapClientProps>(

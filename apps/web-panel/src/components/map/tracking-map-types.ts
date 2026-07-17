@@ -3,3 +3,5 @@ export type TrackingMapPosition = {
   longitude: number;
   label: string;
 };
+
+export type TrackingMapBasemap = "map" | "satellite";

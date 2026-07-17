@@ -118,6 +118,7 @@ export function CustomerAlertWorkspace({
   canViewLocation,
   initialVehicleId,
 }: CustomerAlertWorkspaceProps) {
+  const [basemap, setBasemap] = useState<"map" | "satellite">("map");
   const {
     vehicles,
     loading,
@@ -334,7 +335,10 @@ export function CustomerAlertWorkspace({
       </CollapsibleAlertPanel>
 
       <section className="relative min-w-0 flex-1 overflow-hidden bg-[#eef3f8]">
-        <TrackingMapClient selectedPosition={null} />
+        <TrackingMapClient
+          selectedPosition={null}
+          basemap={basemap}
+        />
 
         <label className="absolute left-3 top-3 z-[1000] flex h-8 w-[220px] items-center rounded-[3px] bg-white px-3 shadow-[0_2px_8px_rgba(35,61,102,0.16)]">
           <input
@@ -357,7 +361,47 @@ export function CustomerAlertWorkspace({
               disabled={
                 !canViewLocation && index === 0
               }
-              aria-label={`Alert map tool ${index + 1}`}
+              onClick={() => {
+                              if (index === 4) {
+                                setBasemap("satellite");
+                              }
+
+                              if (index === 5) {
+                                setBasemap("map");
+                              }
+                            }}
+                            aria-pressed={
+                              index === 4
+                                ? basemap === "satellite"
+                                : index === 5
+                                  ? basemap === "map"
+                                  : undefined
+                            }
+                            aria-label={
+                              index === 4
+                                ? "Satellite view"
+                                : index === 5
+                                  ? "Map view"
+                                  : `Alert map tool ${index + 1}`
+                            }
+                            title={
+                              index === 4
+                                ? "Satellite view"
+                                : index === 5
+                                  ? "Map view"
+                                  : undefined
+                            }
+                            style={
+                              (index === 4 &&
+                                basemap === "satellite") ||
+                              (index === 5 &&
+                                basemap === "map")
+                                ? {
+                                    backgroundColor: "#357cf4",
+                                    color: "#ffffff",
+                                  }
+                                : undefined
+                            }
               className={[
                 "grid h-8 w-8 place-items-center rounded-[3px] border border-[#e1e7f0] bg-white text-[#405779] shadow-[0_2px_8px_rgba(35,61,102,0.16)]",
                 index === 3

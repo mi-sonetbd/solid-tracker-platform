@@ -2,7 +2,7 @@
 
 ## Scope
 
-The shared `TrackingMap` component now provides the same basemap selector on:
+Map and Satellite selection is available on:
 
 ```text
 /monitor
@@ -10,37 +10,46 @@ The shared `TrackingMap` component now provides the same basemap selector on:
 /tracks
 ```
 
-The same component may also expose the selector on management map workspaces.
+## Existing toolbar controls
 
-## Available views
+No additional Leaflet layer-control button is rendered.
 
-### Map
+The existing right-side map toolbar provides the selection:
 
-OpenStreetMap street tiles remain the default view.
+- `Layers3` selects **Satellite view**;
+- `Map` selects **Map view**.
 
-### Satellite
+The selected basemap button uses the existing active blue treatment.
 
-Esri World Imagery provides the satellite imagery view.
+## Basemap providers
 
-## Control placement
+### Map view
 
-The Leaflet layer selector is placed in the bottom-right control stack beside
-the existing zoom controls. Existing workspace CSS that moves `.leaflet-right`
-controls when a property drawer opens also moves this selector.
+OpenStreetMap street tiles are used.
+
+### Satellite view
+
+Esri World Imagery is used.
+
+## Shared map flow
+
+Each customer workspace owns its selected basemap state and passes it through
+`TrackingMapClient` to the shared `TrackingMap` component. The map component
+renders exactly one `TileLayer` based on that state.
 
 ## Google Maps boundary
 
-This stage does not use unofficial Google tile URLs. Exact Google basemap tiles
-require a Google Maps Platform project, billing, an API key, and Map Tiles API
-session handling.
+Unofficial Google tile URLs are not used. Exact Google imagery requires an
+official Google Maps Platform integration with billing, an API key, and Map
+Tiles API session handling.
 
 ## Leaflet safety
 
-The implementation only replaces the basemap tile declaration. It does not
-change:
+The basemap selection does not change:
 
-- position focusing;
-- markers or popups;
-- resize observers;
-- animation safety;
-- map ownership or teardown behavior.
+- `TrackingMapController`;
+- selected-position focus;
+- resize handling;
+- markers and popups;
+- disabled map animations;
+- React Leaflet map ownership and teardown behavior.
