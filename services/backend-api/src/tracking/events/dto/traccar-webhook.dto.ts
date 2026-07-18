@@ -1,12 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsObject, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsObject, IsOptional } from 'class-validator';
 
 export class TraccarWebhookDto {
-  @ApiProperty()
-  @IsString()
-  @MaxLength(60)
-  serverCode!: string;
-
   @ApiProperty()
   @IsObject()
   event!: Record<string, unknown>;
@@ -15,7 +10,8 @@ export class TraccarWebhookDto {
   @IsObject()
   device!: Record<string, unknown>;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsObject()
-  position!: Record<string, unknown>;
+  position?: Record<string, unknown>;
 }

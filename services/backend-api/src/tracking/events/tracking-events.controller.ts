@@ -56,7 +56,7 @@ export class TrackingEventsController {
 export class TrackingWebhooksController {
   constructor(private readonly trackingEventsService: TrackingEventsService) {}
 
-  @Post('traccar')
+  @Post('traccar/:serverCode')
   @UseGuards(TrackingWebhookGuard)
   @ApiHeader({
     name: 'X-Tracking-Webhook-Secret',
@@ -65,7 +65,7 @@ export class TrackingWebhooksController {
   @ApiOperation({
     summary: 'Receive and normalize a Traccar event webhook securely',
   })
-  ingest(@Body() dto: TraccarWebhookDto) {
-    return this.trackingEventsService.ingest(dto);
+  ingest(@Param('serverCode') serverCode: string, @Body() dto: TraccarWebhookDto) {
+    return this.trackingEventsService.ingest(serverCode, dto);
   }
 }

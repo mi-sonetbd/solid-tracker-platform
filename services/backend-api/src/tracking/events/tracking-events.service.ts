@@ -214,10 +214,12 @@ export class TrackingEventsService {
     return jsonSafe(updated);
   }
 
-  async ingest(dto: TraccarWebhookDto) {
+  async ingest(serverCode: string, dto: TraccarWebhookDto) {
+    const position = dto.position ?? {};
+
     const server = await this.prisma.traccarServer.findFirst({
       where: {
-        serverCode: dto.serverCode,
+        serverCode,
         status: {
           in: ['ACTIVE', 'DEGRADED', 'MAINTENANCE'],
         },
@@ -270,10 +272,7 @@ export class TrackingEventsService {
 
     const eventType = this.stringValue(dto.event.type) ?? 'unknown';
     const occurredAt = this.dateValue(
-      dto.event.eventTime ??
-        dto.position.fixTime ??
-        dto.position.deviceTime ??
-        dto.position.serverTime,
+      dto.event.eventTime ?? position.fixTime ?? position.deviceTime ?? position.serverTime,
     );
     const traccarEventId = this.optionalBigInt(dto.event.id);
     const deduplicationKey = traccarEventId
@@ -283,7 +282,7 @@ export class TrackingEventsService {
           deviceId: mapping.deviceId,
           eventType,
           occurredAt,
-          positionId: dto.position.id,
+          positionId: position.id,
         });
 
     const existing = await this.prisma.trackingEvent.findUnique({
@@ -322,12 +321,12 @@ export class TrackingEventsService {
         deduplicationKey,
         eventType,
         severity: this.severity(eventType, dto.event.attributes),
-        latitude: this.optionalNumber(dto.position.latitude),
-        longitude: this.optionalNumber(dto.position.longitude),
+        latitude: this.optionalNumber(position.latitude),
+        longitude: this.optionalNumber(position.longitude),
         occurredAt,
         attributes: toInputJson({
           event: dto.event,
-          position: dto.position,
+          position: dto.position ?? null,
           device: {
             id: dto.device.id,
             uniqueId: dto.device.uniqueId,

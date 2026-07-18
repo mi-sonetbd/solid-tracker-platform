@@ -554,10 +554,9 @@ describe('Tracking and Traccar integration lifecycle (e2e)', () => {
     }
 
     const webhookResponse = await request(app.getHttpServer())
-      .post('/api/v1/tracking/webhooks/traccar')
+      .post(`/api/v1/tracking/webhooks/traccar/${serverCode}`)
       .set('X-Tracking-Webhook-Secret', webhookSecret)
       .send({
-        serverCode,
         event: {
           id: 7001,
           type: 'deviceOverspeed',
@@ -591,6 +590,29 @@ describe('Tracking and Traccar integration lifecycle (e2e)', () => {
     expect(webhookResponse.body.notifications).toHaveLength(1);
 
     trackingEventId = webhookResponse.body.event.id as string;
+
+    const statusWebhookResponse = await request(app.getHttpServer())
+      .post(`/api/v1/tracking/webhooks/traccar/${serverCode}`)
+      .set('X-Tracking-Webhook-Secret', webhookSecret)
+      .send({
+        event: {
+          id: 7002,
+          type: 'deviceOnline',
+          eventTime,
+          deviceId: 101,
+        },
+        device: {
+          id: 101,
+          uniqueId: imei,
+          name: `DHAKA-TRK-${codeSuffix}`,
+        },
+      })
+      .expect(201);
+
+    expect(statusWebhookResponse.body.duplicate).toBe(false);
+    expect(statusWebhookResponse.body.event.eventType).toBe('deviceOnline');
+    expect(statusWebhookResponse.body.event.latitude).toBeNull();
+    expect(statusWebhookResponse.body.event.longitude).toBeNull();
 
     const eventListResponse = await request(app.getHttpServer())
       .get(`/api/v1/tracking/events?vehicleId=${vehicleId}`)
