@@ -44,4 +44,4 @@ WORKDIR /app/services/backend-api
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy --config prisma.config.ts && node dist/main.js"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy --config prisma.config.ts && node dist/src/main.js"]
