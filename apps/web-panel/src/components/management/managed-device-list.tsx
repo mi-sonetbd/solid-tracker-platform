@@ -34,6 +34,7 @@ type ManagedDeviceListProps = {
   loading: boolean;
   error: string;
   selectedVehicleId: string | null;
+  liveVehicleId: string | null;
   onSelectVehicle: (
     vehicle: ManagementMonitorVehicle,
   ) => void;
@@ -46,6 +47,7 @@ export function ManagedDeviceList({
   loading,
   error,
   selectedVehicleId,
+  liveVehicleId,
   onSelectVehicle,
   onRefresh,
 }: ManagedDeviceListProps) {
@@ -233,8 +235,17 @@ export function ManagedDeviceList({
                             vehicle,
                           )}
                         </h3>
-                        <span className="shrink-0 text-[10px] text-[#637493]">
-                          No live data
+                        <span
+                          className={[
+                            "shrink-0 text-[10px] font-semibold",
+                            liveVehicleId === vehicle.id
+                              ? "text-[#30b56a]"
+                              : "text-[#637493]",
+                          ].join(" ")}
+                        >
+                          {liveVehicleId === vehicle.id
+                            ? "Live"
+                            : "No live data"}
                         </span>
                       </div>
 

@@ -15,6 +15,7 @@ import {
   Share2,
   Signal,
   Thermometer,
+  Wifi,
   WifiOff,
   X,
 } from "lucide-react";
@@ -25,9 +26,13 @@ import {
   titleCase,
   type CustomerVehicleAsset,
 } from "@/lib/customer/customer-asset-types";
+import type { TrackingLivePosition } from "@/lib/tracking/live-position-types";
 
 type CustomerDevicePropertyDrawerProps = {
   vehicle: CustomerVehicleAsset;
+  livePosition?: TrackingLivePosition | null;
+  liveLoading?: boolean;
+  liveError?: string;
   onClose: () => void;
 };
 
@@ -55,12 +60,27 @@ function DetailRow({
   );
 }
 
+function formatTrackingDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("en-GB");
+}
+
 export function CustomerDevicePropertyDrawer({
   vehicle,
+  livePosition = null,
+  liveLoading = false,
+  liveError = "",
   onClose,
 }: CustomerDevicePropertyDrawerProps) {
   const assignment = activeDeviceAssignment(vehicle);
   const device = assignment?.device ?? null;
+  const hasPosition = Boolean(livePosition);
+  const coordinates = livePosition
+    ? `${livePosition.latitude.toFixed(6)}, ${livePosition.longitude.toFixed(6)}`
+    : "-";
+  const satellites = livePosition?.attributes?.sat ??
+    livePosition?.attributes?.satellites ?? "-";
 
   return (
     <aside className="absolute bottom-0 right-0 top-0 z-[1200] w-[350px] overflow-y-auto border-l border-[#dfe6ef] bg-[#f8fafc] shadow-[-8px_0_24px_rgba(39,64,105,0.14)]">
@@ -90,16 +110,21 @@ export function CustomerDevicePropertyDrawer({
         <section className="rounded-[6px] border border-[#dfe6ef] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-2 text-[12px] font-semibold text-[#405779]">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#ff3152] text-white">
-                <WifiOff className="h-3 w-3" />
+              <span
+                className={[
+                  "grid h-5 w-5 shrink-0 place-items-center rounded-full text-white",
+                  hasPosition ? "bg-[#30b56a]" : "bg-[#ff3152]",
+                ].join(" ")}
+              >
+                {hasPosition ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               </span>
               <span className="truncate">
-                No live position yet
+                {hasPosition ? "Live position received" : "No live position yet"}
               </span>
             </span>
 
             <span className="shrink-0 text-[10px] font-semibold text-[#52698e]">
-              Tracking pending
+              {hasPosition ? "Online" : liveLoading ? "Loading" : liveError ? "Unavailable" : "Tracking pending"}
             </span>
           </div>
         </section>
@@ -110,7 +135,7 @@ export function CustomerDevicePropertyDrawer({
           </h3>
 
           <p className="mt-3 text-[11px] font-semibold leading-5 text-[#405779]">
-            No live location has been received for this installed tracker.
+            {livePosition?.address || (hasPosition ? "Latest Traccar position" : "No live location has been received for this installed tracker.")}
           </p>
 
           <div className="mt-4 flex items-center justify-between">
@@ -118,7 +143,7 @@ export function CustomerDevicePropertyDrawer({
               Coordinates
             </span>
             <span className="text-[10px] font-semibold text-[#405779]">
-              -
+              {coordinates}
             </span>
           </div>
         </section>
@@ -132,12 +157,12 @@ export function CustomerDevicePropertyDrawer({
             <DetailRow
               icon={RadioTower}
               label="GNSS"
-              value="-"
+              value={hasPosition ? "Fixed" : "-"}
             />
             <DetailRow
               icon={Signal}
               label="Visible satellites"
-              value="-"
+              value={String(satellites)}
             />
             <DetailRow
               label="Cellular signal strength"
@@ -146,12 +171,12 @@ export function CustomerDevicePropertyDrawer({
             <DetailRow
               icon={Clock3}
               label="Last online"
-              value="-"
+              value={formatTrackingDate(livePosition?.serverTime)}
             />
             <DetailRow
               icon={MapPin}
               label="Last fix"
-              value="-"
+              value={formatTrackingDate(livePosition?.fixTime)}
             />
           </dl>
         </section>

@@ -21,12 +21,14 @@ import { ManagedDeviceList } from "@/components/management/managed-device-list";
 import { ManagementMonitorAccountTree } from "@/components/management/management-monitor-account-tree";
 import { ManagementRail } from "@/components/management/management-rail";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
+import type { TrackingMapPosition } from "@/components/map/tracking-map-types";
 import {
   type ManagementMonitorScope,
   type ManagementMonitorVehicle,
 } from "@/lib/management/monitor-types";
 import { useManagementMonitorAssets } from "@/lib/management/use-management-monitor-assets";
 import { useManagementMonitorHierarchy } from "@/lib/management/use-management-monitor-hierarchy";
+import { useManagementLivePosition } from "@/lib/management/use-management-live-position";
 
 const mapTools = [
   Target,
@@ -150,6 +152,24 @@ export function ManagementMonitorWorkspace({
     hierarchyLoading: hierarchy.loading,
     canViewVehicles,
   });
+  const live = useManagementLivePosition({
+    vehicleId: selectedVehicle?.id ?? null,
+    enabled: canViewLocation && Boolean(selectedVehicle),
+  });
+  const selectedPosition = useMemo<TrackingMapPosition | null>(
+    () =>
+      live.position
+        ? {
+            latitude: live.position.latitude,
+            longitude: live.position.longitude,
+            label:
+              selectedVehicle?.registrationNumber ||
+              selectedVehicle?.vehicleCode ||
+              "Tracked vehicle",
+          }
+        : null,
+    [live.position, selectedVehicle],
+  );
 
   const selectedScopeLabel = useMemo(() => {
     if (selectedScope.type !== "PLATFORM") {
@@ -249,13 +269,16 @@ export function ManagementMonitorWorkspace({
           selectedVehicleId={
             selectedVehicle?.id ?? null
           }
+          liveVehicleId={
+            live.position ? selectedVehicle?.id ?? null : null
+          }
           onSelectVehicle={selectVehicle}
           onRefresh={assets.refresh}
         />
       </CollapsiblePanel>
 
       <section className="relative min-w-0 flex-1 overflow-hidden">
-        <TrackingMapClient selectedPosition={null} />
+        <TrackingMapClient selectedPosition={selectedPosition} />
 
         <div className="absolute left-3 top-3 z-[1000] flex items-center gap-2">
           <label className="flex h-8 w-[255px] items-center rounded-[3px] bg-white px-3 shadow-sm">
@@ -301,17 +324,21 @@ export function ManagementMonitorWorkspace({
         {selectedVehicle && drawerOpen ? (
           <CustomerDevicePropertyDrawer
             vehicle={selectedVehicle}
+            livePosition={live.position}
+            liveLoading={live.loading}
+            liveError={live.error}
             onClose={() => setDrawerOpen(false)}
           />
         ) : null}
 
         {selectedVehicle &&
         drawerOpen &&
-        canViewLocation ? (
+        canViewLocation &&
+        !live.position ? (
           <div className="pointer-events-none absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2 rounded-[4px] bg-[#405779]/90 px-4 py-2 text-[10px] font-medium text-white shadow-lg">
-            No real Traccar position exists yet. Map
-            focus activates automatically when a
-            scoped position becomes available.
+            {live.loading
+              ? "Loading live Traccar position..."
+              : live.error || "No live Traccar position is available yet."}
           </div>
         ) : null}
       </section>
