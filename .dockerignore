@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+!production.env.example
+**/node_modules
+**/dist
+**/coverage
+**/.next
+**/.turbo
+*.log
+upload

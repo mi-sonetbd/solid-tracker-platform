@@ -1,0 +1,165 @@
+name: solid-tracker-production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      TRACCAR_DB: ${TRACCAR_DB:?TRACCAR_DB is required}
+      TRACCAR_DB_USER: ${TRACCAR_DB_USER:?TRACCAR_DB_USER is required}
+      TRACCAR_DB_PASSWORD: ${TRACCAR_DB_PASSWORD:?TRACCAR_DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init/01-create-traccar-database.sh:/docker-entrypoint-initdb.d/01-create-traccar-database.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - application
+    logging: *default-logging
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - application
+    logging: *default-logging
+
+  backend-api:
+    image: solid-tracker-backend:${APP_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: services/backend-api/Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - ${SOLID_TRACKER_ENV_FILE:-production.env}
+    environment:
+      NODE_ENV: production
+      APP_PORT: 3000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      TRACCAR_BASE_URL: http://traccar:8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/api/v1/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    stop_grace_period: 30s
+    networks:
+      - application
+    logging: *default-logging
+
+  traccar:
+    image: ${TRACCAR_IMAGE:-traccar/traccar:6.14.5-alpine}
+    restart: unless-stopped
+    environment:
+      CONFIG_USE_ENVIRONMENT_VARIABLES: "true"
+      DATABASE_DRIVER: org.postgresql.Driver
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${TRACCAR_DB}
+      DATABASE_USER: ${TRACCAR_DB_USER}
+      DATABASE_PASSWORD: ${TRACCAR_DB_PASSWORD}
+      DATABASE_MAX_POOL_SIZE: ${TRACCAR_DATABASE_MAX_POOL_SIZE:-20}
+      EVENT_FORWARD_URL: http://backend-api:3000/api/v1/tracking/webhooks/traccar/${TRACCAR_SERVER_CODE}
+      EVENT_FORWARD_TYPE: json
+      EVENT_FORWARD_HEADER: "X-Tracking-Webhook-Secret: ${TRACKING_WEBHOOK_SECRET}"
+      EVENT_STATUS_ENABLE: "true"
+      MEDIA_PATH: /opt/traccar/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend-api:
+        condition: service_healthy
+    ports:
+      - "${TRACCAR_ADMIN_BIND:-127.0.0.1}:${TRACCAR_ADMIN_PORT:-8082}:8082/tcp"
+      - "${TRACCAR_DEVICE_PORT:?TRACCAR_DEVICE_PORT is required}:${TRACCAR_DEVICE_PORT}/tcp"
+      - "${TRACCAR_DEVICE_PORT}:${TRACCAR_DEVICE_PORT}/udp"
+    volumes:
+      - traccar_logs:/opt/traccar/logs
+      - traccar_media:/opt/traccar/media
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8082/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 3m
+    stop_grace_period: 45s
+    networks:
+      - application
+    logging: *default-logging
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - application
+    logging: *default-logging
+
+volumes:
+  postgres_data:
+  redis_data:
+  traccar_logs:
+  traccar_media:
+  caddy_data:
+  caddy_config:
+
+networks:
+  application:
+    driver: bridge
