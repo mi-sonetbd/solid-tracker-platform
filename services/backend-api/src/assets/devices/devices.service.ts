@@ -998,16 +998,17 @@ export class DevicesService {
     });
 
     try {
-      const trackingSynchronization =
-        await this.deviceTrackingService.syncAfterInstallation(auth, deviceId);
+      const trackingSynchronization = await this.deviceTrackingService.syncAfterInstallation(
+        auth,
+        deviceId,
+      );
 
       return {
         ...installation,
         trackingSynchronization,
       };
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown synchronization error';
+      const message = error instanceof Error ? error.message : 'Unknown synchronization error';
 
       this.logger.warn(
         `Device ${deviceId} was installed, but automatic Traccar synchronization failed: ${message}`,

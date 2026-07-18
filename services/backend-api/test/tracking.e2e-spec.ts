@@ -435,7 +435,6 @@ describe('Tracking and Traccar integration lifecycle (e2e)', () => {
       })
       .expect(201);
 
-
     const serverResponse = await request(app.getHttpServer())
       .post('/api/v1/tracking/traccar-servers')
       .set('Authorization', `Bearer ${accessToken}`)

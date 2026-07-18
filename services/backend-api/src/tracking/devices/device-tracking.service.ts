@@ -69,11 +69,7 @@ export class DeviceTrackingService {
     return this.synchronize(auth, deviceId, {});
   }
 
-  private async synchronize(
-    auth: AuthContext,
-    deviceId: string,
-    dto: SyncTrackingDeviceDto,
-  ) {
+  private async synchronize(auth: AuthContext, deviceId: string, dto: SyncTrackingDeviceDto) {
     const device = await this.prisma.device.findUnique({
       where: {
         id: deviceId,
