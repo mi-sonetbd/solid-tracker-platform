@@ -3,12 +3,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../identity/audit/audit.service';
 import type { AuthContext } from '../../identity/common/auth-context';
+import { DeviceTrackingService } from '../../tracking/devices/device-tracking.service';
 import { AssetAccessService } from '../common/asset-access.service';
 import { AssetCodeService } from '../common/asset-code.service';
 import type { DeviceQueryDto } from '../common/asset-query.dto';
@@ -28,11 +30,14 @@ const activeAllocationStatuses = ['ALLOCATED', 'AVAILABLE', 'INSTALLED'] as cons
 
 @Injectable()
 export class DevicesService {
+  private readonly logger = new Logger(DevicesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AssetAccessService,
     private readonly codes: AssetCodeService,
     private readonly auditService: AuditService,
+    private readonly deviceTrackingService: DeviceTrackingService,
   ) {}
 
   async list(auth: AuthContext, query: DeviceQueryDto) {
@@ -992,7 +997,31 @@ export class DevicesService {
       afterData: installation,
     });
 
-    return installation;
+    try {
+      const trackingSynchronization = await this.deviceTrackingService.syncAfterInstallation(
+        auth,
+        deviceId,
+      );
+
+      return {
+        ...installation,
+        trackingSynchronization,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown synchronization error';
+
+      this.logger.warn(
+        `Device ${deviceId} was installed, but automatic Traccar synchronization failed: ${message}`,
+      );
+
+      return {
+        ...installation,
+        trackingSynchronization: {
+          status: 'FAILED',
+          message,
+        },
+      };
+    }
   }
 
   async remove(auth: AuthContext, deviceId: string, dto: RemoveDeviceDto) {

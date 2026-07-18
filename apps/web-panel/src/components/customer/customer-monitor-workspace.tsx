@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   CarFront,
@@ -34,6 +34,7 @@ import type {
   TrackingMapBasemap,
   TrackingMapLocationCommand,
   TrackingMapLocationStatus,
+  TrackingMapPosition,
   TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
 import {
@@ -43,6 +44,7 @@ import {
   type CustomerVehicleAsset,
 } from "@/lib/customer/customer-asset-types";
 import { useCustomerAssets } from "@/lib/customer/use-customer-assets";
+import { useCustomerLivePosition } from "@/lib/customer/use-customer-live-position";
 import { CustomerDevicePanelToolbar, useCustomerDevicePanel } from "@/components/customer/customer-device-panel-toolbar";
 
 type CustomerMonitorWorkspaceProps = {
@@ -128,6 +130,7 @@ function CustomerObjectPanel({
   error,
   search,
   selectedVehicleId,
+  liveVehicleId,
   onSearch,
   onSelectVehicle,
 }: {
@@ -137,6 +140,7 @@ function CustomerObjectPanel({
   error: string;
   search: string;
   selectedVehicleId: string | null;
+  liveVehicleId: string | null;
   onSearch: (value: string) => void;
   onSelectVehicle: (vehicleId: string) => void;
   onRefresh: () => void;
@@ -240,9 +244,11 @@ return (
                             {deviceDisplayName(vehicle)}
                           </h2>
                           <span className="shrink-0 text-[9px] text-[#637493]">
-                            {assignment
-                              ? "No live data"
-                              : "No tracker"}
+                            {liveVehicleId === vehicle.id
+                              ? "Live"
+                              : assignment
+                                ? "No live data"
+                                : "No tracker"}
                           </span>
                         </div>
 
@@ -410,6 +416,27 @@ export function CustomerMonitorWorkspace({
     [selectedVehicleId, vehicles],
   );
 
+  const live = useCustomerLivePosition({
+    vehicleId: selectedVehicle?.id ?? null,
+    enabled:
+      canViewLocation && Boolean(selectedVehicle),
+  });
+
+  const selectedPosition =
+    useMemo<TrackingMapPosition | null>(() => {
+      if (!live.position || !selectedVehicle) {
+        return null;
+      }
+
+      return {
+        id: live.position.id,
+        latitude: live.position.latitude,
+        longitude: live.position.longitude,
+        course: live.position.course,
+        label: deviceDisplayName(selectedVehicle),
+      };
+    }, [live.position, selectedVehicle]);
+
 
   function selectVehicle(vehicleId: string) {
     setSelectedVehicleId(vehicleId);
@@ -440,6 +467,11 @@ export function CustomerMonitorWorkspace({
           error={error}
           search={search}
           selectedVehicleId={selectedVehicleId}
+          liveVehicleId={
+            live.position
+              ? selectedVehicle?.id ?? null
+              : null
+          }
           onSearch={setSearch}
           onSelectVehicle={selectVehicle}
           onRefresh={refresh}
@@ -469,7 +501,7 @@ export function CustomerMonitorWorkspace({
         ].join(" ")}
       >
         <TrackingMapClient
-          selectedPosition={null}
+          selectedPosition={selectedPosition}
           basemap={basemap}
           zoomCommand={zoomCommand}
           streetViewActive={
@@ -801,6 +833,9 @@ export function CustomerMonitorWorkspace({
         {drawerOpen && selectedVehicle ? (
           <CustomerDevicePropertyDrawer
             vehicle={selectedVehicle}
+            livePosition={live.position}
+            liveLoading={live.loading}
+            liveError={live.error}
             onClose={() => setDrawerOpen(false)}
           />
         ) : null}
