@@ -435,18 +435,6 @@ describe('Tracking and Traccar integration lifecycle (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
-      .post(`/api/v1/devices/${deviceId}/install`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .send({
-        vehicleId,
-        latitude: 23.8103,
-        longitude: 90.4125,
-        ignitionConnected: true,
-        relayConnected: true,
-        powerConnectionType: 'BATTERY_DIRECT',
-      })
-      .expect(201);
 
     const serverResponse = await request(app.getHttpServer())
       .post('/api/v1/tracking/traccar-servers')
@@ -468,16 +456,29 @@ describe('Tracking and Traccar integration lifecycle (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(201);
 
-    const syncResponse = await request(app.getHttpServer())
-      .post(`/api/v1/tracking/devices/${deviceId}/sync`)
+    const installResponse = await request(app.getHttpServer())
+      .post(`/api/v1/devices/${deviceId}/install`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        serverId: traccarServerId,
+        vehicleId,
+        latitude: 23.8103,
+        longitude: 90.4125,
+        ignitionConnected: true,
+        relayConnected: true,
+        powerConnectionType: 'BATTERY_DIRECT',
       })
       .expect(201);
 
-    expect(syncResponse.body.mapping.syncStatus).toBe('SYNCED');
-    expect(syncResponse.body.mapping.traccarDeviceId).toBe('101');
+    expect(installResponse.body.trackingSynchronization.mapping.syncStatus).toBe('SYNCED');
+    expect(installResponse.body.trackingSynchronization.mapping.traccarDeviceId).toBe('101');
+
+    const mappingResponse = await request(app.getHttpServer())
+      .get(`/api/v1/tracking/devices/${deviceId}/mappings`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(mappingResponse.body).toHaveLength(1);
+    expect(mappingResponse.body[0].syncStatus).toBe('SYNCED');
 
     const liveResponse = await request(app.getHttpServer())
       .get(`/api/v1/tracking/vehicles/${vehicleId}/live-position`)
