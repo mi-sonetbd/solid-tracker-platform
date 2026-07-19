@@ -165,9 +165,9 @@ export function ManagementMonitorWorkspace({
             longitude: live.position.longitude,
             vehicleType: selectedVehicle?.vehicleType,
             vehicleState:
-              resolveTrackingVehicleState(
-                live.position,
-              ),
+          resolveTrackingVehicleState(
+            live.position,
+          ),
             label:
               selectedVehicle?.registrationNumber ||
               selectedVehicle?.vehicleCode ||

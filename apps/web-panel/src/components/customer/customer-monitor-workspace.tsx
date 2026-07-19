@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   CarFront,
@@ -47,6 +47,7 @@ import {
 import { useCustomerAssets } from "@/lib/customer/use-customer-assets";
 import { useCustomerLivePosition } from "@/lib/customer/use-customer-live-position";
 import { CustomerDevicePanelToolbar, useCustomerDevicePanel } from "@/components/customer/customer-device-panel-toolbar";
+import { VehicleRuntime } from "@/components/tracking/vehicle-runtime";
 
 type CustomerMonitorWorkspaceProps = {
   canViewVehicles: boolean;
@@ -131,7 +132,6 @@ function CustomerObjectPanel({
   error,
   search,
   selectedVehicleId,
-  liveVehicleId,
   onSearch,
   onSelectVehicle,
 }: {
@@ -141,7 +141,6 @@ function CustomerObjectPanel({
   error: string;
   search: string;
   selectedVehicleId: string | null;
-  liveVehicleId: string | null;
   onSearch: (value: string) => void;
   onSelectVehicle: (vehicleId: string) => void;
   onRefresh: () => void;
@@ -217,7 +216,14 @@ return (
                 const selected =
                   selectedVehicleId === vehicle.id;
 
-                return (
+                return <VehicleRuntime
+                    key={vehicle.id}
+                    scope="customer"
+                    vehicleId={vehicle.id}
+                    hasTracker={Boolean(assignment)}
+                  >
+                    {(runtime) => (
+                      (
                   <button
                     key={vehicle.id}
                     type="button"
@@ -232,7 +238,19 @@ return (
                     ].join(" ")}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ff3152] text-white shadow-[0_2px_7px_rgba(255,49,82,0.22)]">
+                      <div
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors duration-200"
+                        style={{
+                          backgroundColor:
+                            runtime.holderColor,
+                          color:
+                            runtime.iconColor,
+                          boxShadow:
+                            runtime.shadow,
+                        }}
+                        title={runtime.label}
+                        aria-label={runtime.label}
+                      >
                         <CarFront
                           className="h-5 w-5"
                           strokeWidth={2.2}
@@ -245,11 +263,7 @@ return (
                             {deviceDisplayName(vehicle)}
                           </h2>
                           <span className="shrink-0 text-[9px] text-[#637493]">
-                            {liveVehicleId === vehicle.id
-                              ? "Live"
-                              : assignment
-                                ? "No live data"
-                                : "No tracker"}
+                            {runtime.label}
                           </span>
                         </div>
 
@@ -281,7 +295,9 @@ return (
                       <MoreVertical className="h-4 w-4 text-[#4a5f80]" />
                     </div>
                   </button>
-                );
+                )
+                    )}
+                  </VehicleRuntime>;
               })}
             </div>
           )}
@@ -473,11 +489,6 @@ export function CustomerMonitorWorkspace({
           error={error}
           search={search}
           selectedVehicleId={selectedVehicleId}
-          liveVehicleId={
-            live.position
-              ? selectedVehicle?.id ?? null
-              : null
-          }
           onSearch={setSearch}
           onSelectVehicle={selectVehicle}
           onRefresh={refresh}

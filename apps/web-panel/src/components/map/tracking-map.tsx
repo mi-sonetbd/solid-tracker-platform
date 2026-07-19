@@ -237,10 +237,14 @@ const carStateIconUrl: Record<
   >,
   string
 > = {
-  moving: "/map-vehicles/car-moving.png",
-  idle: "/map-vehicles/car-idle.png",
-  stopped: "/map-vehicles/car-stopped.png",
-  offline: "/map-vehicles/car-offline.png",
+  moving:
+    "/map-vehicles/car-moving.png",
+  stopped:
+    "/map-vehicles/car-stopped.png",
+  idle:
+    "/map-vehicles/car-idle.png",
+  offline:
+    "/map-vehicles/car-offline.png",
 };
 
 function vehicleMarkerIcon(
@@ -258,14 +262,16 @@ function vehicleMarkerIcon(
 
     return {
       url: carStateIconUrl[state],
-      scaledSize: new google.maps.Size(
-        36,
-        70,
-      ),
-      anchor: new google.maps.Point(
-        18,
-        35,
-      ),
+      scaledSize:
+        new google.maps.Size(
+          36,
+          70,
+        ),
+      anchor:
+        new google.maps.Point(
+          18,
+          35,
+        ),
     };
   }
 
@@ -285,14 +291,16 @@ function vehicleMarkerIcon(
     url:
       "data:image/svg+xml;charset=UTF-8," +
       encodeURIComponent(svg),
-    scaledSize: new google.maps.Size(
-      56,
-      64,
-    ),
-    anchor: new google.maps.Point(
-      28,
-      61,
-    ),
+    scaledSize:
+      new google.maps.Size(
+        56,
+        64,
+      ),
+    anchor:
+      new google.maps.Point(
+        28,
+        61,
+      ),
   };
 }
 

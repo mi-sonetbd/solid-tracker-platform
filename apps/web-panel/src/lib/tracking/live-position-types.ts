@@ -26,12 +26,54 @@ export type TrackingLivePositionResponse = {
 
 export type TrackingVehicleState =
   | "moving"
-  | "idle"
   | "stopped"
+  | "idle"
   | "offline";
 
 export const TRACKING_OFFLINE_AFTER_MS =
-  10 * 60 * 1000;
+  5 * 60 * 1000;
+
+export const TRACKING_MOVING_SPEED_KNOTS =
+  1;
+
+export const TRACKING_VEHICLE_STATE_PRESENTATION: Record<
+  TrackingVehicleState,
+  {
+    label: string;
+    holderColor: string;
+    iconColor: string;
+    mapIconUrl: string;
+  }
+> = {
+  moving: {
+    label: "Moving",
+    holderColor: "#2f9145",
+    iconColor: "#ffffff",
+    mapIconUrl:
+      "/map-vehicles/car-moving.png",
+  },
+  stopped: {
+    label: "Stopped",
+    holderColor: "#ff2344",
+    iconColor: "#ffffff",
+    mapIconUrl:
+      "/map-vehicles/car-stopped.png",
+  },
+  idle: {
+    label: "Idle",
+    holderColor: "#ffd900",
+    iconColor: "#344054",
+    mapIconUrl:
+      "/map-vehicles/car-idle.png",
+  },
+  offline: {
+    label: "Offline",
+    holderColor: "#a6a8ab",
+    iconColor: "#ffffff",
+    mapIconUrl:
+      "/map-vehicles/car-offline.png",
+  },
+};
 
 function trackingBoolean(
   value: unknown,
@@ -60,24 +102,35 @@ function trackingBoolean(
 }
 
 export function resolveTrackingVehicleState(
-  position: TrackingLivePosition,
+  position:
+    | TrackingLivePosition
+    | null
+    | undefined,
   now = Date.now(),
 ): TrackingVehicleState {
+  if (!position) {
+    return "offline";
+  }
+
   const timestamp =
     position.serverTime ??
     position.fixTime ??
     position.deviceTime ??
     null;
 
-  if (timestamp) {
-    const time = new Date(timestamp).getTime();
+  if (!timestamp) {
+    return "offline";
+  }
 
-    if (
-      Number.isFinite(time) &&
-      now - time > TRACKING_OFFLINE_AFTER_MS
-    ) {
-      return "offline";
-    }
+  const timestampMs =
+    new Date(timestamp).getTime();
+
+  if (
+    !Number.isFinite(timestampMs) ||
+    now - timestampMs >
+      TRACKING_OFFLINE_AFTER_MS
+  ) {
+    return "offline";
   }
 
   const speed =
@@ -87,7 +140,8 @@ export function resolveTrackingVehicleState(
 
   if (
     Number.isFinite(speed) &&
-    speed > 1
+    speed >
+      TRACKING_MOVING_SPEED_KNOTS
   ) {
     return "moving";
   }
@@ -102,4 +156,12 @@ export function resolveTrackingVehicleState(
   }
 
   return "stopped";
+}
+
+export function trackingVehicleStatePresentation(
+  state: TrackingVehicleState,
+) {
+  return TRACKING_VEHICLE_STATE_PRESENTATION[
+    state
+  ];
 }

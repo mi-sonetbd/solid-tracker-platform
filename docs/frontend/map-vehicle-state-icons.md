@@ -1,31 +1,34 @@
-# State-Aware Car Map Markers
+# Vehicle Runtime States
 
-Solid Tracker uses the supplied transparent top-view car artwork for car and
-car-like vehicle markers.
+Solid Tracker uses one shared runtime-state resolver for the selected map
+marker and the Customer device-panel icon holder.
 
-## State mapping
+## State rules
 
-- `moving`: green car;
-- `idle`: yellow car;
-- `stopped`: red car;
-- `offline`: gray car.
+1. No position, no usable timestamp, or no new data for more than five minutes
+   is offline and gray.
+2. A recent position with speed above one knot is moving and green.
+3. A recent stopped position with ignition on is idle and yellow.
+4. A recent stopped position with ignition off or unavailable is stopped and
+   red.
 
-## State resolution
+The offline rule has the highest priority. Stale speed and ignition values
+cannot keep a vehicle online.
 
-The shared live-position resolver applies these rules in order:
+## Colors
 
-1. A position older than 10 minutes is offline.
-2. Speed greater than 1 knot is moving.
-3. Ignition on with low speed is idle.
-4. A recent low-speed position with ignition off or unavailable is stopped.
+- Moving: `#2f9145`
+- Stopped, ignition off: `#ff2344`
+- Idle, ignition on: `#ffd900`
+- Offline after five minutes: `#a6a8ab`
 
-Traccar speed values are interpreted in their native knot unit.
+## Polling
 
-## Rendering
+Installed vehicles visible in the Customer device panel refresh their latest
+positions every 30 seconds. Customer scope and location permission continue to
+be enforced by the authenticated BFF and backend route.
 
-The original uploads are transparent PNG images, not vector SVG files. They
-are stored as optimized 102 x 200 pixel map assets and rendered at 36 x 70
-pixels. The map anchor is the center of the car, so the GPS coordinate remains
-aligned with the vehicle body.
+## Map artwork
 
-Motorcycle and CNG markers retain their existing type-specific SVG markers.
+Car and car-like vehicles use the supplied transparent top-view PNG artwork.
+Motorcycle and CNG keep their type-specific SVG marker artwork.
