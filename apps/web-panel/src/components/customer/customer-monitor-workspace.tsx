@@ -37,6 +37,7 @@ import type {
   TrackingMapPosition,
   TrackingMapZoomCommand,
 } from "@/components/map/tracking-map-types";
+import { resolveTrackingVehicleState } from "@/lib/tracking/live-position-types";
 import {
   activeDeviceAssignment,
   deviceDisplayName,
@@ -434,6 +435,10 @@ export function CustomerMonitorWorkspace({
         longitude: live.position.longitude,
         course: live.position.course,
         vehicleType: selectedVehicle?.vehicleType,
+        vehicleState:
+          resolveTrackingVehicleState(
+            live.position,
+          ),
         label: deviceDisplayName(selectedVehicle),
       };
     }, [live.position, selectedVehicle]);

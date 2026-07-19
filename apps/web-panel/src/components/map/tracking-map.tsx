@@ -231,10 +231,44 @@ function vehicleMarkerGlyph(
   }
 }
 
+const carStateIconUrl: Record<
+  NonNullable<
+    TrackingMapPosition["vehicleState"]
+  >,
+  string
+> = {
+  moving: "/map-vehicles/car-moving.png",
+  idle: "/map-vehicles/car-idle.png",
+  stopped: "/map-vehicles/car-stopped.png",
+  offline: "/map-vehicles/car-offline.png",
+};
+
 function vehicleMarkerIcon(
   vehicleType:
     TrackingMapPosition["vehicleType"],
+  vehicleState:
+    TrackingMapPosition["vehicleState"],
 ): google.maps.Icon {
+  if (
+    vehicleType !== "MOTORCYCLE" &&
+    vehicleType !== "CNG"
+  ) {
+    const state =
+      vehicleState ?? "offline";
+
+    return {
+      url: carStateIconUrl[state],
+      scaledSize: new google.maps.Size(
+        36,
+        70,
+      ),
+      anchor: new google.maps.Point(
+        18,
+        35,
+      ),
+    };
+  }
+
   const glyph =
     vehicleMarkerGlyph(vehicleType);
 
@@ -1016,6 +1050,7 @@ export default function TrackingMap({
         position,
         icon: vehicleMarkerIcon(
           selectedPosition.vehicleType,
+          selectedPosition.vehicleState,
         ),
         title: selectedPosition.label,
         clickable: true,

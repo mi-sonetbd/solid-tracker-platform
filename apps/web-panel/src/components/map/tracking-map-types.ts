@@ -1,9 +1,11 @@
 import type { VehicleType } from "@/lib/management/asset-types";
+import type { TrackingVehicleState } from "@/lib/tracking/live-position-types";
 
 export type TrackingMapPosition = {
   latitude: number;
   longitude: number;
   vehicleType?: VehicleType;
+  vehicleState?: TrackingVehicleState;
   label: string;
 };
 

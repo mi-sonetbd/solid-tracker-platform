@@ -22,6 +22,7 @@ import { ManagementMonitorAccountTree } from "@/components/management/management
 import { ManagementRail } from "@/components/management/management-rail";
 import { TrackingMapClient } from "@/components/map/tracking-map-client";
 import type { TrackingMapPosition } from "@/components/map/tracking-map-types";
+import { resolveTrackingVehicleState } from "@/lib/tracking/live-position-types";
 import {
   type ManagementMonitorScope,
   type ManagementMonitorVehicle,
@@ -163,6 +164,10 @@ export function ManagementMonitorWorkspace({
             latitude: live.position.latitude,
             longitude: live.position.longitude,
             vehicleType: selectedVehicle?.vehicleType,
+            vehicleState:
+              resolveTrackingVehicleState(
+                live.position,
+              ),
             label:
               selectedVehicle?.registrationNumber ||
               selectedVehicle?.vehicleCode ||
