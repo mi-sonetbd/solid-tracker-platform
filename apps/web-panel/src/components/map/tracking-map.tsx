@@ -201,6 +201,67 @@ function applyBasemap(
   }
 }
 
+
+function vehicleMarkerGlyph(
+  vehicleType:
+    TrackingMapPosition["vehicleType"],
+) {
+  switch (vehicleType) {
+    case "MOTORCYCLE":
+      return [
+        '<circle cx="18" cy="35" r="5" fill="none" stroke="#ffffff" stroke-width="2.5"/>',
+        '<circle cx="38" cy="35" r="5" fill="none" stroke="#ffffff" stroke-width="2.5"/>',
+        '<path d="M18 35l7-11h6l7 11M25 24l5 11M22 29h13M31 21h5" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
+      ].join("");
+
+    case "CNG":
+      return [
+        '<path d="M15 31h3l3-10h14l6 10v7h-4v-3H19v3h-4v-7zm8-7-2 7h16l-3-7H23z" fill="#ffffff"/>',
+        '<path d="M23 21c1-4 10-4 12 0" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>',
+        '<circle cx="21" cy="35" r="2.5" fill="#357cf4"/>',
+        '<circle cx="35" cy="35" r="2.5" fill="#357cf4"/>',
+      ].join("");
+
+    default:
+      return [
+        '<path d="M14 31l3-8c.7-2 2.1-3 4.2-3h13.6c2.1 0 3.5 1 4.2 3l3 8v8h-4v-3H18v3h-4v-8zm6-7-2 6h20l-2-6H20z" fill="#ffffff"/>',
+        '<circle cx="20" cy="34" r="2.5" fill="#357cf4"/>',
+        '<circle cx="36" cy="34" r="2.5" fill="#357cf4"/>',
+      ].join("");
+  }
+}
+
+function vehicleMarkerIcon(
+  vehicleType:
+    TrackingMapPosition["vehicleType"],
+): google.maps.Icon {
+  const glyph =
+    vehicleMarkerGlyph(vehicleType);
+
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="64" viewBox="0 0 56 64">',
+    '<defs><filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#203858" flood-opacity=".35"/></filter></defs>',
+    '<path filter="url(#shadow)" d="M28 2C13.64 2 2 13.64 2 28c0 18.5 26 34 26 34s26-15.5 26-34C54 13.64 42.36 2 28 2Z" fill="#357cf4" stroke="#ffffff" stroke-width="3"/>',
+    '<circle cx="28" cy="28" r="19" fill="#ffffff" fill-opacity=".08"/>',
+    glyph,
+    '</svg>',
+  ].join("");
+
+  return {
+    url:
+      "data:image/svg+xml;charset=UTF-8," +
+      encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(
+      56,
+      64,
+    ),
+    anchor: new google.maps.Point(
+      28,
+      61,
+    ),
+  };
+}
+
 export default function TrackingMap({
   selectedPosition = null,
   basemap = "google-hybrid",
@@ -249,8 +310,10 @@ export default function TrackingMap({
     );
   const streetViewRequestIdRef =
     useRef(0);
-  const positionCircleRef =
-    useRef<google.maps.Circle | null>(null);
+  const positionMarkerRef =
+    useRef<google.maps.Marker | null>(
+      null,
+    );
   const positionClickListenerRef =
     useRef<google.maps.MapsEventListener | null>(
       null,
@@ -285,8 +348,8 @@ export default function TrackingMap({
       positionClickListenerRef.current?.remove();
       positionClickListenerRef.current = null;
 
-      positionCircleRef.current?.setMap(null);
-      positionCircleRef.current = null;
+      positionMarkerRef.current?.setMap(null);
+      positionMarkerRef.current = null;
 
       infoWindowRef.current?.close();
       infoWindowRef.current = null;
@@ -947,17 +1010,16 @@ export default function TrackingMap({
     map.setCenter(position);
     map.setZoom(16);
 
-    const circle =
-      new google.maps.Circle({
+    const marker =
+      new google.maps.Marker({
         map,
-        center: position,
-        radius: 12,
-        strokeColor: "#ffffff",
-        strokeOpacity: 1,
-        strokeWeight: 3,
-        fillColor: "#ff3152",
-        fillOpacity: 1,
+        position,
+        icon: vehicleMarkerIcon(
+          selectedPosition.vehicleType,
+        ),
+        title: selectedPosition.label,
         clickable: true,
+        optimized: false,
         zIndex: 1000,
       });
 
@@ -972,22 +1034,22 @@ export default function TrackingMap({
     const infoWindow =
       new google.maps.InfoWindow({
         content,
-        position,
         disableAutoPan: false,
       });
 
     const clickListener =
-      circle.addListener(
+      marker.addListener(
         "click",
         () => {
           infoWindow.open({
             map,
+            anchor: marker,
             shouldFocus: false,
           });
         },
       );
 
-    positionCircleRef.current = circle;
+    positionMarkerRef.current = marker;
     infoWindowRef.current = infoWindow;
     positionClickListenerRef.current =
       clickListener;

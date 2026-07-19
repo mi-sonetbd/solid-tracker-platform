@@ -162,6 +162,7 @@ export function ManagementMonitorWorkspace({
         ? {
             latitude: live.position.latitude,
             longitude: live.position.longitude,
+            vehicleType: selectedVehicle?.vehicleType,
             label:
               selectedVehicle?.registrationNumber ||
               selectedVehicle?.vehicleCode ||

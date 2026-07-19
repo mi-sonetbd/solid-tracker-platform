@@ -433,6 +433,7 @@ export function CustomerMonitorWorkspace({
         latitude: live.position.latitude,
         longitude: live.position.longitude,
         course: live.position.course,
+        vehicleType: selectedVehicle?.vehicleType,
         label: deviceDisplayName(selectedVehicle),
       };
     }, [live.position, selectedVehicle]);
