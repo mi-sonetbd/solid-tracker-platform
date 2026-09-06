@@ -15,6 +15,8 @@ import type { AuthContext } from '../../identity/common/auth-context';
 import { CurrentAuth } from '../../identity/common/current-auth.decorator';
 import { RequirePermissions } from '../../identity/common/permissions.decorator';
 import { TrackingEventQueryDto } from '../common/tracking-query.dto';
+import { TraccarPositionWebhookDto } from '../positions/dto/traccar-position-webhook.dto';
+import { TrackingLiveStateService } from '../positions/tracking-live-state.service';
 import { TraccarWebhookDto } from './dto/traccar-webhook.dto';
 import { TrackingEventsService } from './tracking-events.service';
 import { TrackingWebhookGuard } from './tracking-webhook.guard';
@@ -54,7 +56,10 @@ export class TrackingEventsController {
 @ApiTags('Tracking - Webhooks')
 @Controller('tracking/webhooks')
 export class TrackingWebhooksController {
-  constructor(private readonly trackingEventsService: TrackingEventsService) {}
+  constructor(
+    private readonly trackingEventsService: TrackingEventsService,
+    private readonly trackingLiveStateService: TrackingLiveStateService,
+  ) {}
 
   @Post('traccar/:serverCode')
   @UseGuards(TrackingWebhookGuard)
@@ -67,5 +72,21 @@ export class TrackingWebhooksController {
   })
   ingest(@Param('serverCode') serverCode: string, @Body() dto: TraccarWebhookDto) {
     return this.trackingEventsService.ingest(serverCode, dto);
+  }
+
+  @Post('traccar/:serverCode/positions')
+  @UseGuards(TrackingWebhookGuard)
+  @ApiHeader({
+    name: 'X-Tracking-Webhook-Secret',
+    required: true,
+  })
+  @ApiOperation({
+    summary: 'Receive and project a Traccar live-position update securely',
+  })
+  ingestPosition(
+    @Param('serverCode') serverCode: string,
+    @Body() dto: TraccarPositionWebhookDto,
+  ) {
+    return this.trackingLiveStateService.ingest(serverCode, dto);
   }
 }
