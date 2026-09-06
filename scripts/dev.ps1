@@ -9,6 +9,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$global:LASTEXITCODE = 0
 Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "dev-common.ps1")
