@@ -5,6 +5,7 @@ import { TrackingAccessService } from '../common/tracking-access.service';
 import type { PositionHistoryQueryDto } from '../common/tracking-query.dto';
 import { TraccarClientService } from '../common/traccar-client.service';
 import { IntegrationJobsService } from '../jobs/integration-jobs.service';
+import { TrackingLiveStateService } from './tracking-live-state.service';
 
 @Injectable()
 export class TrackingPositionsService {
@@ -13,15 +14,28 @@ export class TrackingPositionsService {
     private readonly access: TrackingAccessService,
     private readonly client: TraccarClientService,
     private readonly jobs: IntegrationJobsService,
+    private readonly liveState: TrackingLiveStateService,
   ) {}
 
   async livePosition(auth: AuthContext, vehicleId: string) {
     await this.access.assertVehicle(auth, vehicleId);
     const assignment = await this.activePrimaryMapping(vehicleId);
+    const mapping = assignment.device.traccarMappings[0];
+    const projected = await this.liveState.read(vehicleId, mapping.id);
+
+    if (projected) {
+      return {
+        vehicleId,
+        deviceId: assignment.deviceId,
+        mappingId: mapping.id,
+        traccarServerId: mapping.traccarServerId,
+        position: this.liveState.publicPosition(projected),
+      };
+    }
 
     const job = await this.jobs.create({
       jobType: 'FETCH_LATEST_POSITION',
-      traccarServerId: assignment.device.traccarMappings[0].traccarServerId,
+      traccarServerId: mapping.traccarServerId,
       entityType: 'Vehicle',
       entityId: vehicleId,
       idempotencyKey: undefined,
@@ -34,7 +48,6 @@ export class TrackingPositionsService {
     await this.jobs.processing(job.id);
 
     try {
-      const mapping = assignment.device.traccarMappings[0];
       const positions = await this.client.latestPositions(
         mapping.traccarServer,
         mapping.traccarDeviceId,
