@@ -9,9 +9,10 @@ import {
   IsString,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
-export class TraccarPositionWebhookDto {
+export class TraccarPositionDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -87,4 +88,13 @@ export class TraccarPositionWebhookDto {
   @IsOptional()
   @IsObject()
   attributes?: Record<string, unknown>;
+}
+
+export class TraccarPositionWebhookDto {
+  @ValidateNested()
+  @Type(() => TraccarPositionDto)
+  position!: TraccarPositionDto;
+
+  @IsObject()
+  device!: Record<string, unknown>;
 }
