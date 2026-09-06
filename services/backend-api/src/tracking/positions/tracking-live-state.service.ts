@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../redis/redis.service';
-import type { TraccarPositionWebhookDto } from './dto/traccar-position-webhook.dto';
+import type {
+  TraccarPositionDto,
+  TraccarPositionWebhookDto,
+} from './dto/traccar-position-webhook.dto';
 
 const LIVE_STATE_TTL_SECONDS = 30 * 24 * 60 * 60;
 
@@ -17,7 +20,7 @@ export type TrackingLiveState = {
   hasValidFix: boolean;
   lastValidLatitude: number | null;
   lastValidLongitude: number | null;
-  position: TraccarPositionWebhookDto;
+  position: TraccarPositionDto;
 };
 
 type ProjectionResult = {
@@ -33,6 +36,7 @@ export class TrackingLiveStateService {
   ) {}
 
   async ingest(serverCode: string, dto: TraccarPositionWebhookDto) {
+    const position = dto.position;
     const server = await this.prisma.traccarServer.findFirst({
       where: {
         serverCode,
@@ -49,7 +53,7 @@ export class TrackingLiveStateService {
     const mapping = await this.prisma.traccarDeviceMapping.findFirst({
       where: {
         traccarServerId: server.id,
-        traccarDeviceId: BigInt(dto.deviceId),
+        traccarDeviceId: BigInt(position.deviceId),
         isActive: true,
         syncStatus: 'SYNCED',
       },
@@ -71,20 +75,20 @@ export class TrackingLiveStateService {
       throw new BadRequestException('Webhook device is not actively assigned as a primary vehicle tracker.');
     }
 
-    const sourceTime = this.sourceTime(dto);
+    const sourceTime = this.sourceTime(position);
     const state: TrackingLiveState = {
       vehicleId: assignment.vehicleId,
       deviceId: mapping.deviceId,
       mappingId: mapping.id,
       traccarServerId: server.id,
-      sourcePositionId: dto.id ?? null,
+      sourcePositionId: position.id ?? null,
       sourceTimeMs: sourceTime.getTime(),
       lastReportedAt: new Date().toISOString(),
-      lastValidFixAt: dto.valid ? sourceTime.toISOString() : null,
-      hasValidFix: dto.valid,
-      lastValidLatitude: dto.valid ? dto.latitude : null,
-      lastValidLongitude: dto.valid ? dto.longitude : null,
-      position: dto,
+      lastValidFixAt: position.valid ? sourceTime.toISOString() : null,
+      hasValidFix: position.valid,
+      lastValidLatitude: position.valid ? position.latitude : null,
+      lastValidLongitude: position.valid ? position.longitude : null,
+      position,
     };
 
     const result = await this.project(state);
@@ -124,7 +128,7 @@ export class TrackingLiveStateService {
     return state;
   }
 
-  publicPosition(state: TrackingLiveState): TraccarPositionWebhookDto | null {
+  publicPosition(state: TrackingLiveState): TraccarPositionDto | null {
     return state.hasValidFix ? state.position : null;
   }
 
@@ -187,8 +191,8 @@ export class TrackingLiveStateService {
     return JSON.parse(raw) as ProjectionResult;
   }
 
-  private sourceTime(dto: TraccarPositionWebhookDto): Date {
-    const value = dto.fixTime ?? dto.deviceTime ?? dto.serverTime;
+  private sourceTime(position: TraccarPositionDto): Date {
+    const value = position.fixTime ?? position.deviceTime ?? position.serverTime;
 
     if (!value) {
       throw new BadRequestException('Traccar position must contain fixTime, deviceTime, or serverTime.');
