@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import type { AuthContext } from '../../identity/common/auth-context';
 import { TrackingAccessService } from '../common/tracking-access.service';
@@ -9,6 +9,8 @@ import { TrackingLiveStateService } from './tracking-live-state.service';
 
 @Injectable()
 export class TrackingPositionsService {
+  private readonly logger = new Logger(TrackingPositionsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: TrackingAccessService,
@@ -21,16 +23,22 @@ export class TrackingPositionsService {
     await this.access.assertVehicle(auth, vehicleId);
     const assignment = await this.activePrimaryMapping(vehicleId);
     const mapping = assignment.device.traccarMappings[0];
-    const projected = await this.liveState.read(vehicleId, mapping.id);
 
-    if (projected) {
-      return {
-        vehicleId,
-        deviceId: assignment.deviceId,
-        mappingId: mapping.id,
-        traccarServerId: mapping.traccarServerId,
-        position: this.liveState.publicPosition(projected),
-      };
+    try {
+      const projected = await this.liveState.read(vehicleId, mapping.id);
+
+      if (projected) {
+        return {
+          vehicleId,
+          deviceId: assignment.deviceId,
+          mappingId: mapping.id,
+          traccarServerId: mapping.traccarServerId,
+          position: this.liveState.publicPosition(projected),
+        };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown Redis live-state error';
+      this.logger.warn(`Live-state projection unavailable for vehicle ${vehicleId}: ${message}`);
     }
 
     const job = await this.jobs.create({
