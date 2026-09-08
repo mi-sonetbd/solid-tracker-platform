@@ -83,10 +83,7 @@ export class TrackingWebhooksController {
   @ApiOperation({
     summary: 'Receive and project a Traccar live-position update securely',
   })
-  ingestPosition(
-    @Param('serverCode') serverCode: string,
-    @Body() dto: TraccarPositionWebhookDto,
-  ) {
+  ingestPosition(@Param('serverCode') serverCode: string, @Body() dto: TraccarPositionWebhookDto) {
     return this.trackingLiveStateService.ingest(serverCode, dto);
   }
 }
