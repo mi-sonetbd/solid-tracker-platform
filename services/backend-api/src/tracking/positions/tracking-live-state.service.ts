@@ -60,7 +60,9 @@ export class TrackingLiveStateService {
     });
 
     if (!mapping) {
-      throw new NotFoundException('Webhook device does not have an active synchronized Solid Tracker mapping.');
+      throw new NotFoundException(
+        'Webhook device does not have an active synchronized Solid Tracker mapping.',
+      );
     }
 
     const assignment = await this.prisma.vehicleDeviceAssignment.findFirst({
@@ -72,7 +74,9 @@ export class TrackingLiveStateService {
     });
 
     if (!assignment) {
-      throw new BadRequestException('Webhook device is not actively assigned as a primary vehicle tracker.');
+      throw new BadRequestException(
+        'Webhook device is not actively assigned as a primary vehicle tracker.',
+      );
     }
 
     const sourceTime = this.sourceTime(position);
@@ -195,7 +199,9 @@ export class TrackingLiveStateService {
     const value = position.fixTime ?? position.deviceTime ?? position.serverTime;
 
     if (!value) {
-      throw new BadRequestException('Traccar position must contain fixTime, deviceTime, or serverTime.');
+      throw new BadRequestException(
+        'Traccar position must contain fixTime, deviceTime, or serverTime.',
+      );
     }
 
     const date = new Date(value);
