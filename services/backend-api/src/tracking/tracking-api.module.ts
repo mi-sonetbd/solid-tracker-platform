@@ -24,6 +24,7 @@ import {
   NotificationsController,
 } from './notifications/notifications.controller';
 import { NotificationsService } from './notifications/notifications.service';
+import { TrackingLiveStateService } from './positions/tracking-live-state.service';
 import { TrackingPositionsController } from './positions/tracking-positions.controller';
 import { TrackingPositionsService } from './positions/tracking-positions.service';
 import { TraccarServersController } from './servers/traccar-servers.controller';
@@ -51,6 +52,7 @@ import { TraccarServersService } from './servers/traccar-servers.service';
     TraccarServersService,
     IntegrationJobsService,
     DeviceTrackingService,
+    TrackingLiveStateService,
     TrackingPositionsService,
     NotificationsService,
     TrackingEventsService,
